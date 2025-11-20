@@ -1,0 +1,150 @@
+name: Release
+
+on:
+  push:
+    branches: [main]
+    tags:
+      - 'v*'
+  workflow_dispatch:
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  build:
+    strategy:
+      fail-fast: false
+      matrix:
+        platform: [macos-latest, ubuntu-20.04, windows-latest]
+
+    runs-on: ${{ matrix.platform }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install dependencies (ubuntu only)
+        if: matrix.platform == 'ubuntu-20.04'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libgtk-3-dev libwebkit2gtk-4.0-dev libappindicator3-dev librsvg2-dev patchelf
+
+      - name: Rust setup
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Rust cache
+        uses: swatinem/rust-cache@v2
+        with:
+          workspaces: './src-tauri -> target'
+
+      - name: Sync node version and setup cache
+        uses: actions/setup-node@v4
+        with:
+          node-version: 'lts/*'
+          cache: 'npm'
+
+      - name: Install frontend dependencies
+        run: npm ci
+
+      - name: Build the app
+        uses: tauri-apps/tauri-action@v0
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tagName: ${{ github.ref_name }}
+          releaseName: 'Antigravity Agent v__VERSION__'
+          releaseBody: 'See the assets to download and install this version.'
+          releaseDraft: true
+          prerelease: false
+          includeDebug: false
+          includeRelease: true
+
+  create-release:
+    needs: build
+    runs-on: ubuntu-latest
+    if: startsWith(github.ref, 'refs/tags/')
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Download artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+
+      - name: Generate release notes
+        id: release_notes
+        run: |
+          # 获取版本号
+          VERSION=${GITHUB_REF#refs/tags/v}
+
+          # 生成发布说明
+          cat > release_notes.md << EOF
+          # Antigravity Agent v$VERSION
+
+          ## 🚀 新功能
+          - 支持用户配置文件和目录的备份与还原
+          - 跨平台支持 (Windows, macOS, Linux)
+          - 直观的用户界面，支持文件对话框选择目录
+          - 实时状态反馈和错误处理
+
+          ## 📦 安装说明
+
+          ### Windows
+          1. 下载 \`Antigravity.Agent_\${VERSION}_x64-setup.exe\`
+          2. 运行安装程序并按照提示完成安装
+          3. 启动 "Antigravity Agent"
+
+          ### macOS
+          1. 下载 \`Antigravity.Agent_\${VERSION}_x64.dmg\`
+          2. 双击 DMG 文件打开安装器
+          3. 将应用拖拽到 Applications 文件夹
+          4. 从 Launchpad 启动应用
+
+          ### Linux
+          1. 下载 \`Antigravity.Agent_\${VERSION}_amd64.AppImage\`
+          2. 添加执行权限: \`chmod +x Antigravity.Agent_\${VERSION}_amd64.AppImage\`
+          3. 运行: \`./Antigravity.Agent_\${VERSION}_amd64.AppImage\`
+
+          ## 🎯 使用方法
+          1. **创建备份**: 选择要备份的配置文件目录，命名后点击"创建备份"
+          2. **还原备份**: 从下拉列表选择备份，选择目标目录，点击"还原备份"
+          3. **管理备份**: 在管理界面查看所有备份，可以删除不需要的备份
+
+          ## 🔧 系统要求
+          - Windows 10/11 (x64)
+          - macOS 10.15+ (x64)
+          - Ubuntu 20.04+ 或其他现代 Linux 发行版 (x64)
+
+          ## 📝 更新日志
+
+          ### v$VERSION
+          - 🎉 首次发布
+          - ✨ 支持多种配置文件类型的备份
+          - 🛡️ 安全的文件压缩和解压
+          - 🎨 现代化的用户界面
+
+          ## 🐛 问题反馈
+          如果遇到问题，请在 [GitHub Issues](https://github.com/${{ github.repository }}/issues) 中报告。
+
+          ## 📄 许可证
+          本项目采用 MIT 许可证。详见 [LICENSE](https://github.com/${{ github.repository }}/blob/main/LICENSE) 文件。
+          EOF
+
+          # 设置输出
+          echo "notes<<EOF" >> $GITHUB_OUTPUT
+          cat release_notes.md >> $GITHUB_OUTPUT
+          echo "EOF" >> $GITHUB_OUTPUT
+
+          # 保存到文件
+          cp release_notes.md release_notes.txt
+
+      - name: Create Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: artifacts/**/*
+          body_path: release_notes.txt
+          draft: false
+          prerelease: false
+          generate_release_notes: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

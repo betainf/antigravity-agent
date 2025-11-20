@@ -1,0 +1,25 @@
+[package]
+name = "antigravity-agent"
+version = "0.1.0"
+description = "Antigravity Agent - Profile backup and account management tool"
+authors = ["you"]
+edition = "2021"
+
+[build-dependencies]
+tauri-build = { version = "2.0", features = [] }
+
+[dependencies]
+tauri = { version = "2.9", features = [] }
+tauri-plugin-shell = "2.3"
+tauri-plugin-dialog = "2.4"
+tauri-plugin-fs = "2.0"
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+tokio = { version = "1.48", features = ["full"] }
+zip = "2.2"
+walkdir = "2.5"
+dirs = "6.0"
+chrono = { version = "0.4", features = ["serde"] }
+rusqlite = { version = "0.32", features = ["bundled"] }
+shellexpand = "3.0"
+
