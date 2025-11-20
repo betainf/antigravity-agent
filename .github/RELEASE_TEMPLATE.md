@@ -12,8 +12,8 @@
 ## 📦 安装说明
 
 ### Windows
-1. 下载 `Antigravity-Agent___VERSION__x64-setup.exe`
-2. 运行安装程序并按照提示完成安装
+1. 下载 `Antigravity-Agent___VERSION__x64.exe`
+2. 双击直接运行，无需安装
 3. 启动 "Antigravity Agent"
 
 ### macOS
