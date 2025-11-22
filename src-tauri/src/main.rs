@@ -67,6 +67,7 @@ use crate::commands::{
     get_current_antigravity_info,
     get_log_content,
     get_log_info,
+    get_recent_accounts,
     // platform_commands
     get_platform_info,
     get_system_tray_state,
@@ -212,6 +213,7 @@ fn main() {
             backup_profile,
             restore_profile,
             list_backups,
+            get_recent_accounts,
             collect_backup_contents,
             restore_backup_files,
             delete_backup,

@@ -165,6 +165,59 @@ pub async fn list_backups(state: State<'_, AppState>) -> Result<Vec<String>, Str
     Ok(all_backups)
 }
 
+/// 获取最近使用的账户列表（基于文件修改时间排序）
+#[tauri::command]
+pub async fn get_recent_accounts(
+    state: State<'_, AppState>,
+    limit: Option<usize>,
+) -> Result<Vec<String>, String> {
+    let antigravity_dir = state.config_dir.join("antigravity-accounts");
+
+    if !antigravity_dir.exists() {
+        return Ok(Vec::new());
+    }
+
+    let mut accounts_with_time: Vec<(String, std::time::SystemTime)> = Vec::new();
+
+    // 读取所有账户文件并获取修改时间
+    for entry in fs::read_dir(&antigravity_dir).map_err(|e| format!("读取用户目录失败: {}", e))? {
+        let entry = entry.map_err(|e| format!("读取目录项失败: {}", e))?;
+        let path = entry.path();
+
+        if path.extension().is_some_and(|ext| ext == "json") {
+            if let Some(name) = path.file_stem() {
+                let account_name = name.to_string_lossy().to_string();
+                
+                // 获取文件修改时间
+                match fs::metadata(&path) {
+                    Ok(metadata) => {
+                        if let Ok(modified) = metadata.modified() {
+                            accounts_with_time.push((account_name, modified));
+                        }
+                    }
+                    Err(_) => continue,
+                }
+            }
+        }
+    }
+
+    // 按修改时间降序排序（最近修改的在前）
+    accounts_with_time.sort_by(|a, b| b.1.cmp(&a.1));
+
+    // 提取账户名并应用限制
+    let mut result: Vec<String> = accounts_with_time
+        .into_iter()
+        .map(|(name, _)| name)
+        .collect();
+
+    if let Some(limit) = limit {
+        result.truncate(limit);
+    }
+
+    Ok(result)
+}
+
+
 /// 收集所有备份文件的完整内容
 #[tauri::command]
 pub async fn collect_backup_contents(
