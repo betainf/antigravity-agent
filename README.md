@@ -4,11 +4,13 @@
 > 
 ![dashborad.png](screenshots/dashborad.png)
 
+Windows/MacOS ✅️ 
+
+Linux 支持开发中...
+
 ## 下载安装
 
 前往 [Releases](../../releases) 页面下载最新版本：
-
-**Linux、macOS 开发中**
 
 ## 📋 操作指南
 
@@ -37,7 +39,6 @@
 
 ## 📝 TODO 列表
 
-- [ ] 托盘快速切换账户
 - [ ] 默认托盘模式
 - [ ] CLI 支持
 - [ ] 识别账户额度
@@ -46,6 +47,6 @@
 - [ ] 国际化支持
 - [ ] 主题支持
 - [ ] 检查更新
-- [ ] macOS/Linux 支持
+- [ ] Linux 支持
 - [ ] 规范开发流程
 - [ ] CHANGELOG
