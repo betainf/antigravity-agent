@@ -25,4 +25,9 @@ impl ConfigManager {
     pub fn window_state_file(&self) -> PathBuf {
         self.config_dir.join(paths::WINDOW_STATE_FILE)
     }
+
+    /// 获取应用设置文件路径
+    pub fn app_settings_file(&self) -> PathBuf {
+        self.config_dir.join("app_settings.json")
+    }
 }

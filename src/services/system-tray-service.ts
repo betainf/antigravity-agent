@@ -1,102 +1,29 @@
 /**
  * 系统托盘服务
  *
- * 提供系统托盘功能的前端接口
+ * 提供系统托盘功能的简化前端接口 - 所有逻辑由后端处理
  */
 
 import { invoke } from '@tauri-apps/api/core';
 
 export interface SystemTrayStatus {
   enabled: boolean;
-  message?: string;
+  message: string;
+}
+
+export interface SystemTrayFullStatus {
+  runtime_enabled: boolean;
+  tray_exists: boolean;
+  saved_state: boolean;
+  is_consistent: boolean;
 }
 
 /**
- * 系统托盘服务类
+ * 系统托盘服务类 - 纯调用接口，所有逻辑由后端处理
  */
 export class SystemTrayService {
   /**
-   * 启用系统托盘功能
-   */
-  static async enableSystemTray(): Promise<SystemTrayStatus> {
-    try {
-      const result = await invoke<string>('enable_system_tray');
-      return {
-        enabled: true,
-        message: result
-      };
-    } catch (error) {
-      return {
-        enabled: false,
-        message: `启用系统托盘失败: ${error}`
-      };
-    }
-  }
-
-  /**
-   * 禁用系统托盘功能
-   */
-  static async disableSystemTray(): Promise<SystemTrayStatus> {
-    try {
-      const result = await invoke<string>('disable_system_tray');
-      return {
-        enabled: false,
-        message: result
-      };
-    } catch (error) {
-      return {
-        enabled: false,
-        message: `禁用系统托盘失败: ${error}`
-      };
-    }
-  }
-
-  /**
-   * 最小化窗口到系统托盘
-   */
-  static async minimizeToTray(): Promise<string> {
-    return await invoke<string>('minimize_to_tray');
-  }
-
-  /**
-   * 从系统托盘恢复窗口
-   */
-  static async restoreFromTray(): Promise<string> {
-    return await invoke<string>('restore_from_tray');
-  }
-
-  /**
-   * 检查系统托盘是否启用
-   */
-  static async isSystemTrayEnabled(): Promise<boolean> {
-    return await invoke<boolean>('is_system_tray_enabled');
-  }
-
-  /**
-   * 切换系统托盘状态
-   */
-  static async toggleSystemTray(enabled: boolean): Promise<SystemTrayStatus> {
-    if (enabled) {
-      return this.enableSystemTray();
-    } else {
-      return this.disableSystemTray();
-    }
-  }
-
-  /**
-   * 保存系统托盘状态到持久化存储
-   */
-  static async saveSystemTrayState(enabled: boolean): Promise<string> {
-    try {
-      const result = await invoke<string>('save_system_tray_state', { enabled });
-      return result;
-    } catch (error) {
-      throw new Error(`保存系统托盘状态失败: ${error}`);
-    }
-  }
-
-  /**
-   * 获取持久化的系统托盘状态
+   * 获取系统托盘状态（持久化状态）
    */
   static async getSystemTrayState(): Promise<boolean> {
     try {
@@ -108,38 +35,60 @@ export class SystemTrayService {
   }
 
   /**
-   * 启用系统托盘并保存状态
+   * 切换系统托盘状态（纯后端处理所有逻辑）
+   * 后端会自动处理状态检查、防重复创建、状态同步等
    */
-  static async enableSystemTrayWithSave(): Promise<SystemTrayStatus> {
+  static async toggleSystemTray(): Promise<SystemTrayStatus> {
     try {
-      const status = await this.enableSystemTray();
-      if (status.enabled) {
-        await this.saveSystemTrayState(true);
-      }
-      return status;
-    } catch (error) {
+      const result = await invoke<any>('toggle_system_tray');
+
       return {
-        enabled: false,
-        message: `启用系统托盘失败: ${error}`
+        enabled: result.enabled,
+        message: result.message
+      };
+    } catch (error) {
+      // 出错时返回当前状态
+      const currentState = await this.getSystemTrayState();
+      return {
+        enabled: currentState,
+        message: `操作失败: ${error}`
       };
     }
   }
 
   /**
-   * 禁用系统托盘并保存状态
+   * 同步系统托盘状态（确保状态一致性）
+   * 后端会检查所有状态并自动修复不一致问题
    */
-  static async disableSystemTrayWithSave(): Promise<SystemTrayStatus> {
+  static async syncSystemTrayState(): Promise<string> {
     try {
-      const status = await this.disableSystemTray();
-      if (!status.enabled) {
-        await this.saveSystemTrayState(false);
-      }
-      return status;
+      return await invoke<string>('sync_system_tray_state');
     } catch (error) {
+      throw new Error(`同步状态失败: ${error}`);
+    }
+  }
+
+  /**
+   * 获取系统托盘完整状态信息（用于调试）
+   */
+  static async getSystemTrayFullStatus(): Promise<SystemTrayFullStatus> {
+    try {
+      return await invoke<SystemTrayFullStatus>('get_system_tray_status');
+    } catch (error) {
+      console.warn('获取系统托盘完整状态失败:', error);
       return {
-        enabled: false,
-        message: `禁用系统托盘失败: ${error}`
+        runtime_enabled: false,
+        tray_exists: false,
+        saved_state: true,
+        is_consistent: false
       };
     }
+  }
+
+  /**
+   * 检查系统托盘是否启用（运行时状态）
+   */
+  static async isSystemTrayEnabled(): Promise<boolean> {
+    return await invoke<boolean>('is_system_tray_enabled');
   }
 }

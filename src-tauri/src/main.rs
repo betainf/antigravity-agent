@@ -41,6 +41,9 @@ mod constants;
 /// 配置管理器模块
 mod config_manager;
 
+/// 应用设置模块
+mod app_settings;
+
 /// 工具模块
 mod utils;
 
@@ -81,6 +84,7 @@ use crate::commands::{
     get_platform_info,
     get_system_tray_state,
     is_system_tray_enabled,
+    toggle_system_tray,
     // process_commands
     kill_antigravity,
     is_antigravity_running,  // 新增
@@ -178,6 +182,7 @@ impl Default for AppState {
 
 fn main() {
     println!("🚀 启动 Antigravity Agent");
+    println!("🔧 [main] 开始初始化应用程序...");
 
     // 记录系统启动信息
     crate::utils::log_decorator::log_system_info();
@@ -190,7 +195,17 @@ fn main() {
         .plugin(tauri_plugin_process::init())
         .manage(AppState::default())
         .setup(|app| {
+            println!("🔧 [setup] 开始应用程序设置...");
+            
+            // 初始化应用设置管理器
+            let app_handle = app.handle();
+            app.manage(app_settings::AppSettingsManager::new(app_handle));
+            
+            // 初始化系统托盘管理器
+            app.manage(system_tray::SystemTrayManager::new());
+
             // 初始化简单日志记录器
+            println!("🔧 [setup] 初始化日志记录器...");
             let log_dir = dirs::config_dir()
                 .unwrap_or_else(|| std::path::PathBuf::from("."))
                 .join("antigravity-agent")
@@ -199,6 +214,7 @@ fn main() {
 
             simple_logging::log_to_file(log_dir.join("antigravity-agent.log"), LevelFilter::Info)
                 .ok();
+            println!("✅ [setup] 日志记录器初始化完成");
 
             // 在 release 模式下禁用右键菜单
             #[cfg(not(debug_assertions))]
@@ -210,17 +226,22 @@ fn main() {
                 }
             }
 
+            // 初始化系统托盘管理器
+            println!("🔧 [setup] 开始初始化系统托盘管理器...");
+            let system_tray = app.state::<system_tray::SystemTrayManager>();
+            match system_tray.initialize(app.handle()) {
+                Ok(_) => println!("✅ [setup] 系统托盘管理器初始化成功"),
+                Err(e) => println!("⚠️ [setup] 系统托盘管理器初始化失败: {}", e),
+            }
+
             // 初始化窗口事件处理器
+            println!("🔧 [setup] 初始化窗口事件处理器...");
             if let Err(e) = window_event_handler::init_window_event_handler(app) {
                 eprintln!("⚠️  窗口事件处理器初始化失败: {}", e);
             }
+            println!("✅ [setup] 窗口事件处理器初始化完成");
 
-            // 初始化系统托盘管理器
-            match system_tray::SystemTrayManager::initialize_global(app.handle()) {
-                Ok(_) => println!("✅ 系统托盘管理器初始化成功"),
-                Err(e) => println!("⚠️ 系统托盘管理器初始化失败: {}", e),
-            }
-
+            println!("✅ [setup] 应用程序设置完成");
             Ok(())
         })
         .invoke_handler(tauri::generate_handler![
@@ -265,6 +286,7 @@ fn main() {
             is_system_tray_enabled,
             save_system_tray_state,
             get_system_tray_state,
+            toggle_system_tray,
             export_logs,
             get_log_content,
             get_log_info,

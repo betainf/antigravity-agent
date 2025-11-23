@@ -1,5 +1,0 @@
-export * from './button'
-export * from './label'
-export * from './tooltip'
-export * from './toolbar-button'
-export * from './toolbar-title'

@@ -1,10 +1,9 @@
 import React from 'react';
 import * as Switch from '@radix-ui/react-switch';
-import {SystemTrayService} from '../../services/system-tray-service';
 
 interface SystemTraySwitchProps {
   checked: boolean;
-  onCheckedChange: (checked: boolean) => void;
+  onCheckedChange: () => void;
   disabled?: boolean;
   showStatus: (message: string, isError?: boolean) => void;
 }
@@ -12,6 +11,7 @@ interface SystemTraySwitchProps {
 /**
  * 系统托盘开关组件
  *
+ * 纯UI组件，所有的业务逻辑都由 useSystemTray hook 处理
  * 当启用时，关闭按钮会变成最小化到系统托盘
  * 当禁用时，恢复正常关闭行为
  */
@@ -23,32 +23,18 @@ const SystemTraySwitch: React.FC<SystemTraySwitchProps> = ({
 }) => {
   const [isChanging, setIsChanging] = React.useState(false);
 
-  const handleCheckedChange = async (newChecked: boolean) => {
-    if (isChanging) return;
+  const handleCheckedChange = async () => {
+    if (isChanging || disabled) {
+      return;
+    }
 
     setIsChanging(true);
-    showStatus(newChecked ? '正在启用系统托盘...' : '正在禁用系统托盘...');
 
     try {
-      let result;
-      if (newChecked) {
-        result = await SystemTrayService.enableSystemTrayWithSave();
-      } else {
-        result = await SystemTrayService.disableSystemTrayWithSave();
-      }
-
-      if (result.enabled === newChecked) {
-        showStatus(result.message || `系统托盘已${newChecked ? '启用' : '禁用'}`);
-        // 通知父组件状态已更改
-        onCheckedChange(newChecked);
-      } else {
-        showStatus(result.message || '操作失败', true);
-        // 不调用 onCheckedChange，保持原状态
-      }
+      // 直接调用父组件提供的处理函数，所有业务逻辑都在那里处理
+      await onCheckedChange();
     } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : '未知错误';
-      showStatus(`操作失败: ${errorMessage}`, true);
-      // 不调用 onCheckedChange，保持原状态
+      showStatus('操作失败，请重试', true);
     } finally {
       setIsChanging(false);
     }
@@ -56,11 +42,9 @@ const SystemTraySwitch: React.FC<SystemTraySwitchProps> = ({
 
   return (
     <div className="flex items-center gap-3">
-      <div className="flex items-center gap-2">
-        <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
-          系统托盘
-        </span>
-      </div>
+      <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
+        系统托盘
+      </span>
 
       <Switch.Root
         className="SwitchRoot"

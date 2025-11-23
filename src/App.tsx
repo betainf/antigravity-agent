@@ -163,8 +163,6 @@ function App() {
         onBackupAndRestart={backupAndRestartAntigravity}
         loadingState={loadingState}
         showStatus={showStatus}
-        passwordDialog={passwordDialog}
-        onPasswordDialogCancel={handlePasswordDialogCancel}
         onSettingsClick={() => setIsSettingsOpen(true)}
       />
 

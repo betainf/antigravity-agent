@@ -107,12 +107,22 @@ pub fn init_window_event_handler(app: &tauri::App) -> Result<(), Box<dyn std::er
                     }
 
                     // 防抖：避免频繁保存
-                    {
-                        let mut last_save_time = last_save.lock().unwrap();
-                        if last_save_time.elapsed() < Duration::from_secs(1) {
-                            return;
+                    let should_save = match last_save.try_lock() {
+                        Ok(mut last_save_time) => {
+                            let should = last_save_time.elapsed() >= Duration::from_secs(1);
+                            if should {
+                                *last_save_time = Instant::now();
+                            }
+                            should
                         }
-                        *last_save_time = Instant::now();
+                        Err(_) => {
+                            // 锁被占用，跳过保存避免阻塞
+                            false
+                        }
+                    };
+
+                    if !should_save {
+                        return;
                     }
 
                     save_current_window_state(&window).await;
@@ -139,12 +149,22 @@ pub fn init_window_event_handler(app: &tauri::App) -> Result<(), Box<dyn std::er
                     }
 
                     // 防抖：避免频繁保存
-                    {
-                        let mut last_save_time = last_save.lock().unwrap();
-                        if last_save_time.elapsed() < Duration::from_secs(1) {
-                            return;
+                    let should_save = match last_save.try_lock() {
+                        Ok(mut last_save_time) => {
+                            let should = last_save_time.elapsed() >= Duration::from_secs(1);
+                            if should {
+                                *last_save_time = Instant::now();
+                            }
+                            should
                         }
-                        *last_save_time = Instant::now();
+                        Err(_) => {
+                            // 锁被占用，跳过保存避免阻塞
+                            false
+                        }
+                    };
+
+                    if !should_save {
+                        return;
                     }
 
                     save_current_window_state(&window).await;
@@ -152,48 +172,29 @@ pub fn init_window_event_handler(app: &tauri::App) -> Result<(), Box<dyn std::er
             }
             // 注意：Tauri 2.x 中没有 Maximized/Unmaximized 事件
             // 最大化/还原状态会在 Resized 事件中捕获和处理
-            // 窗口关闭时处理系统托盘逻辑
+                    // 窗口关闭时处理系统托盘逻辑
             tauri::WindowEvent::CloseRequested { api, .. } => {
                 println!("🚪 收到窗口关闭请求事件");
 
                 // 检查系统托盘是否启用
-                if let Some(manager) = crate::system_tray::SystemTrayManager::get_global() {
-                    match manager.lock() {
-                        Ok(manager) => {
-                            if manager.is_enabled() {
-                                println!("📋 系统托盘已启用，阻止关闭并最小化到托盘");
+                let app_handle = window_for_events.app_handle();
+                let system_tray = app_handle.state::<crate::system_tray::SystemTrayManager>();
+                let tray_enabled = system_tray.is_enabled_setting(app_handle);
 
-                                // 阻止窗口关闭
-                                api.prevent_close();
+                if tray_enabled {
+                    println!("📋 系统托盘已启用，阻止关闭并最小化到托盘");
+                    // 阻止窗口关闭
+                    api.prevent_close();
 
-                                // 最小化到系统托盘 - 使用 std::thread::spawn 避免异步锁竞争
-                                let _window = window_for_events.clone();
-                                std::thread::spawn(move || {
-                                    // 在新线程中同步调用，避免异步上下文中的锁竞争
-                                    if let Some(manager) =
-                                        crate::system_tray::SystemTrayManager::get_global()
-                                    {
-                                        match manager.lock() {
-                                            Ok(mut manager) => {
-                                                if let Err(e) = manager.minimize_to_tray() {
-                                                    eprintln!("最小化到托盘失败: {}", e);
-                                                }
-                                            }
-                                            Err(_) => {
-                                                eprintln!(
-                                                    "⚠️ 系统托盘管理器锁中毒，无法最小化到托盘"
-                                                );
-                                            }
-                                        }
-                                    }
-                                });
-                                return;
-                            }
+                    // 在异步运行时中执行最小化操作
+                    let app_handle = window_for_events.app_handle().clone();
+                    tauri::async_runtime::spawn(async move {
+                        let system_tray = app_handle.state::<crate::system_tray::SystemTrayManager>();
+                        if let Err(e) = system_tray.minimize_to_tray(&app_handle) {
+                            eprintln!("最小化到托盘失败: {}", e);
                         }
-                        Err(_) => {
-                            eprintln!("⚠️ 系统托盘管理器锁中毒，无法检查托盘状态");
-                        }
-                    }
+                    });
+                    return;
                 }
 
                 println!("📋 系统托盘未启用，允许关闭窗口");
@@ -224,7 +225,6 @@ async fn save_current_window_state(window: &tauri::WebviewWindow) {
             width: outer_size.width as f64,
             height: outer_size.height as f64,
             maximized: is_maximized,
-            system_tray_enabled: true, // 这里使用默认值，因为系统托盘状态有专门的持久化机制
         };
 
         if let Err(e) = save_window_state(current_state).await {

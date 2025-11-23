@@ -14,7 +14,6 @@ pub struct WindowState {
     pub width: f64,
     pub height: f64,
     pub maximized: bool,
-    pub system_tray_enabled: bool,
 }
 
 impl Default for WindowState {
@@ -25,7 +24,6 @@ impl Default for WindowState {
             width: 800.0,
             height: 600.0,
             maximized: false,
-            system_tray_enabled: true, // 默认启用系统托盘
         }
     }
 }
@@ -108,53 +106,4 @@ pub async fn load_window_state() -> Result<WindowState, String> {
     }
 }
 
-/// 保存系统托盘启用状态
-pub async fn save_system_tray_state(enabled: bool) -> Result<(), String> {
-    // 使用静态变量避免重复调用
-    use std::sync::atomic::{AtomicBool, Ordering::SeqCst};
-    static IS_SAVING: AtomicBool = AtomicBool::new(false);
 
-    // 如果正在保存，直接返回（使用顺序一致性保证原子性）
-    if IS_SAVING
-        .compare_exchange(false, true, SeqCst, SeqCst)
-        .is_err()
-    {
-        return Ok(());
-    }
-
-    // 先加载现有的窗口状态
-    let mut state = load_window_state().await?;
-
-    // 更新系统托盘状态
-    state.system_tray_enabled = enabled;
-
-    // 保存更新后的状态
-    let result = save_window_state(state).await;
-
-    // 释放保存锁（使用顺序一致性保证可见性）
-    IS_SAVING.store(false, SeqCst);
-
-    result
-}
-
-/// 获取系统托盘启用状态
-pub async fn get_system_tray_state() -> Result<bool, String> {
-    // 使用静态变量避免重复调用
-    use std::sync::atomic::{AtomicBool, Ordering::SeqCst};
-    static IS_LOADING: AtomicBool = AtomicBool::new(false);
-
-    // 如果正在加载，返回缓存值或默认值（使用顺序一致性保证原子性）
-    if IS_LOADING
-        .compare_exchange(false, true, SeqCst, SeqCst)
-        .is_err()
-    {
-        return Ok(true); // 默认启用
-    }
-
-    let state = load_window_state().await;
-
-    // 释放加载锁（使用顺序一致性保证可见性）
-    IS_LOADING.store(false, SeqCst);
-
-    state.map(|s| s.system_tray_enabled)
-}

@@ -93,7 +93,6 @@ export const VibratingButton: React.FC<VibratingButtonProps> = ({
         startVibration();
       }, vibrationStartDelay);
     } else {
-      console.log('⏹️ 震动组件停止');
       reset();
     }
 

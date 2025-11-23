@@ -1,6 +1,5 @@
-import React, { useState, useMemo, useEffect, useRef } from 'react';
+import React, { useState, useMemo } from 'react';
 import { Plus, Download, Upload } from 'lucide-react';
-import PasswordDialog from './PasswordDialog';
 import UpdateDialog from './UpdateDialog';
 import ConfirmDialog from './ConfirmDialog';
 import { TooltipProvider } from './ui/tooltip';
@@ -9,21 +8,12 @@ import SystemTraySwitch from './ui/system-tray-switch';
 import ActionButton from './ui/action-button';
 import { SilentLogExport } from './SilentLogExport';
 import { useUpdateChecker } from '../hooks/useUpdateChecker';
-import { SystemTrayService } from '../services/system-tray-service';
+import { useSystemTray } from '../hooks/useSystemTray';
 
 interface LoadingState {
   isProcessLoading: boolean;
   isImporting: boolean;
   isExporting: boolean;
-}
-
-interface PasswordDialogState {
-  isOpen: boolean;
-  title: string;
-  description?: string;
-  requireConfirmation?: boolean;
-  validatePassword?: (password: string) => { isValid: boolean; message?: string };
-  onSubmit: (password: string) => void;
 }
 
 interface ToolbarProps {
@@ -44,10 +34,6 @@ interface ToolbarProps {
   loadingState: LoadingState;
   showStatus: (message: string, isError?: boolean) => void;
 
-  // 密码对话框
-  passwordDialog: PasswordDialogState;
-  onPasswordDialogCancel: () => void;
-
   // 设置
   onSettingsClick?: () => void;
 }
@@ -62,13 +48,32 @@ const Toolbar: React.FC<ToolbarProps> = ({
   onBackupAndRestart,
   loadingState = { isProcessLoading: false, isImporting: false, isExporting: false },
   showStatus,
-  passwordDialog = { isOpen: false, title: '', onSubmit: () => { } },
-  onPasswordDialogCancel,
   onSettingsClick
 }) => {
-  // 系统托盘状态
-  const [trayEnabled, setTrayEnabled] = useState(false);
-  const initializedRef = useRef(false);
+  // 使用系统托盘 Hook 管理所有托盘相关逻辑
+  const {
+    enabled: trayEnabled,
+    isLoading: isTrayLoading,
+    error: trayError,
+    toggle: toggleTray
+  } = useSystemTray({
+    onStatusChange: (enabled, message) => {
+      if (message && message !== '状态一致，无需同步') {
+        showStatus(message, trayError !== null);
+      }
+    }
+  });
+
+  // 处理系统托盘开关变化 - 直接调用 hook 的 toggle 函数
+  // 后端会自动处理所有逻辑，前端只需要调用
+  const handleTrayToggle = async () => {
+    try {
+      // 新的简化接口：直接调用 toggle，不需要传递参数
+      await toggleTray();
+    } catch (error) {
+      showStatus('切换系统托盘状态失败', true);
+    }
+  };
 
   // 确认对话框状态（用于"登录新账户"操作）
   const [confirmDialog, setConfirmDialog] = useState<{
@@ -83,51 +88,7 @@ const Toolbar: React.FC<ToolbarProps> = ({
     onConfirm: () => { }
   });
 
-  // 初始化系统托盘状态 - 只在组件挂载时执行一次
-  useEffect(() => {
-    // 防止重复初始化
-    if (initializedRef.current) return;
-    initializedRef.current = true;
-
-    const initSystemTray = async () => {
-      try {
-        // 首先获取持久化的状态
-        const savedEnabled = await SystemTrayService.getSystemTrayState();
-        console.log(`📋 持久化的系统托盘状态: ${savedEnabled ? '已启用' : '未启用'}`);
-
-        // 然后检查实际的运行时状态
-        const runtimeEnabled = await SystemTrayService.isSystemTrayEnabled();
-        console.log(`📋 运行时系统托盘状态: ${runtimeEnabled ? '已启用' : '未启用'}`);
-
-        // 使用持久化状态作为UI显示状态
-        setTrayEnabled(savedEnabled);
-
-        // 如果状态不一致，显示提示
-        if (savedEnabled !== runtimeEnabled) {
-          showStatus(`系统托盘状态已更新为${savedEnabled ? '启用' : '禁用'}`);
-        }
-      } catch (error) {
-        console.error('初始化系统托盘状态失败:', error);
-        // 出错时使用默认启用状态
-        setTrayEnabled(true);
-      }
-    };
-
-    initSystemTray();
-  }, []); // 空依赖数组，只在挂载时执行一次
-
-  // 处理系统托盘开关变化
-  const handleTrayToggle = async (enabled: boolean) => {
-    try {
-      // 更新UI状态
-      setTrayEnabled(enabled);
-      return { enabled };
-    } catch (error) {
-      console.error('切换系统托盘状态失败:', error);
-      throw error;
-    }
-  };
-
+  
   // 处理登录新账户按钮点击
   const handleBackupAndRestartClick = () => {
     console.log('🔘 用户点击登录新账户按钮，显示确认对话框');
@@ -313,18 +274,7 @@ const Toolbar: React.FC<ToolbarProps> = ({
         }}
       />
 
-      {/* 密码对话框 */}
-      <PasswordDialog
-        isOpen={passwordDialog.isOpen}
-        onOpenChange={(open) => !open && onPasswordDialogCancel()}
-        title={passwordDialog.title}
-        description={passwordDialog.description}
-        requireConfirmation={passwordDialog.requireConfirmation}
-        validatePassword={passwordDialog.validatePassword}
-        onSubmit={passwordDialog.onSubmit}
-        onCancel={onPasswordDialogCancel}
-      />
-
+  
       {/* 更新对话框 */}
       <UpdateDialog
         isOpen={isUpdateDialogOpen}
