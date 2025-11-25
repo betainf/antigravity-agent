@@ -27,11 +27,4 @@ export class AntigravityService {
       throw new Error(`备份并重启失败: ${errorMessage}`);
     }
   }
-
-  /**
-   * 获取备份列表
-   */
-  static async getBackupList(): Promise<string[]> {
-    return invoke('list_backups')
-  }
 }

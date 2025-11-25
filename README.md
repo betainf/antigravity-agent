@@ -1,8 +1,10 @@
 # Antigravity Agent
 
-> 开箱即用的 Antigravity 账户切换软件。
+> 开箱即用的 Antigravity 账户管理程序。
 
-<img src="screenshots/dashboard.png" width="45%"> <img src="screenshots/settings.png" width="45%">
+![dashborad.png](screenshots/dashboard.png)
+![dashborad.png](screenshots/settings.png)
+
 
 Windows/MacOS ✅️
 
@@ -61,5 +63,6 @@ Windows/MacOS ✅️
 - [ ] 主题支持
 - [ ] 检查更新
 - [ ] Linux 支持
+- [ ] 扩展支持
 - [ ] 规范开发流程
 - [ ] CHANGELOG

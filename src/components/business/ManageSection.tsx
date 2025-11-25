@@ -36,8 +36,6 @@ const BusinessManageSection: React.FC<BusinessManageSectionProps> = ({
     loadUsers();
   }, [getUsers, showStatus]);
 
-  // 提取邮箱列表作为 backup 使用
-  const backups = users.map(user => user.email);
   const [isClearDialogOpen, setIsClearDialogOpen] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [backupToDelete, setBackupToDelete] = useState<string | null>(null);
@@ -70,7 +68,7 @@ const BusinessManageSection: React.FC<BusinessManageSectionProps> = ({
   };
 
   const handleClearAllBackups = () => {
-    if (backups.length === 0) {
+    if (users.length === 0) {
       showStatus('当前没有用户备份可清空', true);
       return;
     }
@@ -92,7 +90,7 @@ const BusinessManageSection: React.FC<BusinessManageSectionProps> = ({
       <section className="card section-span-full mt-4">
         <div className="flex justify-between items-center mb-4">
           <h2>用户管理</h2>
-          {backups.length > 0 && (
+          {users.length > 0 && (
             <BaseTooltip content="清空所有备份" side="bottom">
               <BusinessActionButton
                 variant="destructive"
@@ -105,20 +103,20 @@ const BusinessManageSection: React.FC<BusinessManageSectionProps> = ({
             </BaseTooltip>
           )}
         </div>
-        <div className={backups.length === 0 ? "backup-list-empty" : "backup-list-vertical"}>
+        <div className={users.length === 0 ? "backup-list-empty" : "backup-list-vertical"}>
           {isLoading || isInitialLoading ? (
             <div className="flex flex-col items-center justify-center py-8 text-light-text-muted">
               <BaseSpinner size="lg" />
               <p className="mt-3">正在加载用户列表...</p>
             </div>
-          ) : backups.length === 0 ? (
+          ) : users.length === 0 ? (
             <p className="text-light-text-muted">暂无用户</p>
           ) : (
-            backups.map((backup, index) => (
-              <div key={`${backup}-${index}`} className="backup-item-vertical">
-                <BaseTooltip content={backup} side="bottom">
+            users.map((user, index) => (
+              <div key={`${user.email}-${index}`} className="backup-item-vertical">
+                <BaseTooltip content={user.email} side="bottom">
                   <span className="backup-name">
-                    {maskBackupFilename(backup)}
+                    {maskBackupFilename(user.email)}
                   </span>
                 </BaseTooltip>
                 <div className="flex gap-2">
@@ -126,7 +124,7 @@ const BusinessManageSection: React.FC<BusinessManageSectionProps> = ({
                     <BusinessActionButton
                       variant="default"
                       size="sm"
-                      onClick={() => handleSwitchAccount(backup)}
+                      onClick={() => handleSwitchAccount(user.email)}
                       loadingText="切换中..."
                     >
                       切换
@@ -135,7 +133,7 @@ const BusinessManageSection: React.FC<BusinessManageSectionProps> = ({
                   <BaseButton
                     variant="destructive"
                     size="sm"
-                    onClick={() => handleDeleteBackup(backup)}
+                    onClick={() => handleDeleteBackup(user.email)}
                   >
                     删除
                   </BaseButton>
@@ -151,7 +149,7 @@ const BusinessManageSection: React.FC<BusinessManageSectionProps> = ({
         isOpen={isClearDialogOpen}
         onOpenChange={setIsClearDialogOpen}
         title="确认清空所有备份"
-        description={`此操作将永久删除所有 ${backups.length} 个用户备份文件，且无法恢复。请确认您要继续此操作吗？`}
+        description={`此操作将永久删除所有 ${users.length} 个用户备份文件，且无法恢复。请确认您要继续此操作吗？`}
         onConfirm={confirmClearAllBackups}
         onCancel={() => setIsClearDialogOpen(false)}
         variant="destructive"

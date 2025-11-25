@@ -139,32 +139,6 @@ pub async fn restore_profile(
     Ok(format!("还原成功到: {}", target_path))
 }
 
-/// 列出所有可用备份
-#[tauri::command]
-pub async fn list_backups(state: State<'_, AppState>) -> Result<Vec<String>, String> {
-    let mut all_backups = Vec::new();
-
-    // 只读取Antigravity账户目录中的JSON文件
-    let antigravity_dir = state.config_dir.join("antigravity-accounts");
-
-    if antigravity_dir.exists() {
-        for entry in
-            fs::read_dir(&antigravity_dir).map_err(|e| format!("读取用户目录失败: {}", e))?
-        {
-            let entry = entry.map_err(|e| format!("读取目录项失败: {}", e))?;
-            let path = entry.path();
-
-            if path.extension().is_some_and(|ext| ext == "json") {
-                if let Some(name) = path.file_stem() {
-                    all_backups.push(name.to_string_lossy().to_string());
-                }
-            }
-        }
-    }
-
-    Ok(all_backups)
-}
-
 /// 获取最近使用的账户列表（基于文件修改时间排序）
 #[tauri::command]
 pub async fn get_recent_accounts(

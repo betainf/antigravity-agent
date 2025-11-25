@@ -8,7 +8,7 @@ import { create } from 'zustand';
 import { open, save } from '@tauri-apps/plugin-dialog';
 import { readFile } from '@tauri-apps/plugin-fs';
 import { invoke } from '@tauri-apps/api/core';
-import { AntigravityService } from '../../services/antigravity-service';
+// AntigravityService 导入移除了，现在使用 user-management store
 
 // 内部类型定义 (不导出)
 interface BackupData {
@@ -35,7 +35,7 @@ export interface PasswordDialogConfig {
 interface ConfigState {
   isImporting: boolean;
   isExporting: boolean;
-  hasUserData: boolean;
+  // hasUserData 移除了，现在由 user-management store 管理
   isCheckingData: boolean;
 }
 
@@ -43,9 +43,8 @@ interface ConfigState {
 interface ConfigActions {
   setImporting: (isImporting: boolean) => void;
   setExporting: (isExporting: boolean) => void;
-  setHasUserData: (hasUserData: boolean) => void;
+  // setHasUserData 和 checkUserData 移除了，现在由 user-management store 管理
   setCheckingData: (isCheckingData: boolean) => void;
-  checkUserData: () => Promise<void>;
   importConfig: (
     showStatus: (message: string, isError?: boolean) => void,
     showPasswordDialog: (config: PasswordDialogConfig) => void,
@@ -64,29 +63,15 @@ export const useConfigStore = create<ConfigState & ConfigActions>()(
     // 初始状态
     isImporting: false,
     isExporting: false,
-    hasUserData: false,
+    // hasUserData 移除了，现在由 user-management store 管理
     isCheckingData: false,
 
     // 状态设置方法
     setImporting: (isImporting: boolean) => set({ isImporting }),
     setExporting: (isExporting: boolean) => set({ isExporting }),
-    setHasUserData: (hasUserData: boolean) => set({ hasUserData }),
     setCheckingData: (isCheckingData: boolean) => set({ isCheckingData }),
 
-    // ============ 检查用户数据 ============
-    checkUserData: async (): Promise<void> => {
-      try {
-        set({ isCheckingData: true });
-        const backupList = await AntigravityService.getBackupList();
-        set({ hasUserData: backupList.length > 0 });
-        console.log('📋 [检查] 用户数据状态:', backupList.length > 0 ? '有数据' : '无数据');
-      } catch (error) {
-        console.error('❌ [检查] 检查用户数据失败:', error);
-        set({ hasUserData: false });
-      } finally {
-        set({ isCheckingData: false });
-      }
-    },
+    // setHasUserData 和 checkUserData 移除了，现在由 user-management store 管理
 
     // ============ 导入配置 ============
     importConfig: async (
@@ -311,27 +296,13 @@ export function useConfigManager(
   const {
     isImporting,
     isExporting,
-    hasUserData,
+    // hasUserData 移除了，现在由 user-management store 管理
     isCheckingData,
     importConfig,
     exportConfig,
-    checkUserData,
   } = useConfigStore();
 
-  // 组件挂载时检查用户数据
-  useEffect(() => {
-    checkUserData();
-  }, [checkUserData]);
-
-  // 当刷新操作完成后，重新检查用户数据
-  useEffect(() => {
-    if (!isRefreshing) {
-      const timer = setTimeout(() => {
-        checkUserData();
-      }, 500); // 延迟500ms确保刷新完成
-      return () => clearTimeout(timer);
-    }
-  }, [isRefreshing, checkUserData]);
+  // checkUserData 相关逻辑移除了，现在由 user-management store 管理
 
   // 包装方法以传递必要的参数
   const handleImportConfig = () => importConfig(showStatus, showPasswordDialog, closePasswordDialog);
@@ -340,7 +311,7 @@ export function useConfigManager(
   return {
     isImporting,
     isExporting,
-    hasUserData,
+    // hasUserData 移除了，现在由 user-management store 管理
     isCheckingData,
     importConfig: handleImportConfig,
     exportConfig: handleExportConfig,

@@ -2,14 +2,11 @@
  * 用户管理类型定义 - 简化版
  */
 
-// 用户基本信息
-export interface User {
-  email: string;
-}
+import type { AntigravityAccount } from '@/commands/types/account.types';
 
 // Store 状态
 export interface UserStoreState {
-  users: User[];
+  users: AntigravityAccount[];
   isLoading: boolean;
 }
 
@@ -25,6 +22,6 @@ export interface UserStoreActions {
   clearAllUsers: () => Promise<void>;
 
   // 查询
-  getUsers: () => Promise<User[]>;
-  searchUsers: (keyword: string) => User[];
+  getUsers: () => Promise<AntigravityAccount[]>;
+  searchUsers: (keyword: string) => AntigravityAccount[];
 }

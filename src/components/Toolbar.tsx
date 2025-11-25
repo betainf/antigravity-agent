@@ -1,5 +1,5 @@
 import React, {useMemo, useState} from 'react';
-import {Download, Plus, RefreshCw, Upload} from 'lucide-react';
+import {Download, Plus, RefreshCw, Upload, Activity, Play, Square} from 'lucide-react';
 import BusinessUpdateDialog from './business/UpdateDialog';
 import BusinessConfirmDialog from './business/ConfirmDialog';
 import BusinessActionButton from './business/ActionButton';
@@ -8,6 +8,9 @@ import ToolbarTitle from './ui/toolbar-title';
 import {useUpdateChecker} from '../hooks/useUpdateChecker';
 import {useUserManagement} from '@/modules/user-management/store';
 import {useDbMonitoringStore} from "@/modules/db-monitoring-store.ts";
+import {useAntigravityIsRunning} from '@/hooks/useAntigravityIsRunning';
+import { invoke } from '@tauri-apps/api/core';
+import {AccountCommands} from "@/commands/AccountCommands.ts";
 
 interface LoadingState {
   isProcessLoading: boolean;
@@ -19,7 +22,7 @@ interface ToolbarProps {
   // 配置管理
   onImport: () => void;
   onExport: () => void;
-  hasUserData: boolean;
+  // hasUserData 移除了，现在从内部 store 获取
   isCheckingData: boolean;
 
   // 进程管理（登录新账户）
@@ -36,15 +39,20 @@ interface ToolbarProps {
 const Toolbar: React.FC<ToolbarProps> = ({
   onImport,
   onExport,
-  hasUserData,
+  // hasUserData 移除了，现在内部从 store 获取
   isCheckingData,
   onBackupAndRestart,
   loadingState = { isProcessLoading: false, isImporting: false, isExporting: false },
   showStatus,
   onSettingsClick
 }) => {
-  const {addCurrentUser} = useUserManagement();
+  const {users, addCurrentUser} = useUserManagement();
   const {dbMonitoringEnabled} = useDbMonitoringStore();
+  const [isTestingLS, setIsTestingLS] = useState(false);
+
+  // Antigravity 进程状态
+  const isRunning = useAntigravityIsRunning((state) => state.isRunning);
+  const isCheckingStatus = useAntigravityIsRunning((state) => state.isChecking);
 
   // 确认对话框状态（用于"登录新账户"操作）
   const [confirmDialog, setConfirmDialog] = useState<{
@@ -134,6 +142,29 @@ const Toolbar: React.FC<ToolbarProps> = ({
         loadingState.isExporting;
   }, [loadingState]);
 
+  // 测试语言服务器 GetUserStatus
+  const handleTestLanguageServer = async () => {
+    setIsTestingLS(true);
+    console.log(await AccountCommands.getAccounts())
+    try {
+      const apiKey = window.prompt('请输入语言服务器 apiKey');
+      if (!apiKey || apiKey.trim() === '') {
+        showStatus('apiKey 不能为空', true);
+        setIsTestingLS(false);
+        return;
+      }
+      const result = await invoke('language_server_get_user_status', { apiKey });
+      console.log('[LS Test] language_server_get_user_status result:', result);
+      showStatus('语言服务器调用成功，详情见控制台');
+    } catch (error) {
+      console.error('[LS Test] 调用失败:', error);
+      const msg = error instanceof Error ? error.message : String(error);
+      showStatus(`语言服务器调用失败: ${msg}`, true);
+    } finally {
+      setIsTestingLS(false);
+    }
+  };
+
   return (
     <TooltipProvider delayDuration={300}>
       <div className="toolbar bg-gradient-to-r from-slate-50 to-slate-100 dark:from-slate-800 dark:to-slate-900 border-b border-gray-200 dark:border-gray-700 sticky top-0 z-50 backdrop-blur-sm shadow-sm">
@@ -145,6 +176,20 @@ const Toolbar: React.FC<ToolbarProps> = ({
                 downloadProgress={downloadProgress}
                 onUpdateClick={handleUpdateBadgeClick}
               />
+
+              {/* Antigravity 进程状态指示器 */}
+              <div
+                className="ml-2 p-2"
+                title={isRunning ? 'Antigravity 正在运行' : 'Antigravity 未运行'}
+              >
+                {isCheckingStatus ? (
+                  <RefreshCw className="w-4 h-4 animate-spin text-gray-400" />
+                ) : isRunning ? (
+                  <Play className="w-4 h-4 text-green-500 fill-green-500" />
+                ) : (
+                  <Square className="w-4 h-4 text-red-500 fill-red-500" />
+                )}
+              </div>
 
               {/* 添加当前用户按钮 */}
               <button
@@ -200,14 +245,27 @@ const Toolbar: React.FC<ToolbarProps> = ({
                 onClick={onExport}
                 variant="secondary"
                 icon={<Download className="h-4 w-4" />}
-                tooltip={hasUserData ? "导出为加密配置文件" : "没有用户信息可以导出"}
-                disabled={!hasUserData}
+                tooltip={users.length > 0 ? "导出为加密配置文件" : "没有用户信息可以导出"}
+                disabled={users.length === 0}
                 isLoading={loadingState.isExporting || isCheckingData}
                 loadingText={isCheckingData ? "检查中..." : "导出中..."}
                 isAnyLoading={isAnyLoading}
               >
                 导出
               </BusinessActionButton>
+
+              {/*<BusinessActionButton*/}
+              {/*  onClick={handleTestLanguageServer}*/}
+              {/*  variant="secondary"*/}
+              {/*  icon={<Activity className="h-4 w-4" />}*/}
+              {/*  tooltip="测试调用语言服务器 GetUserStatus，结果打印到控制台"*/}
+              {/*  isLoading={isTestingLS}*/}
+              {/*  loadingText="测试中..."*/}
+              {/*  isAnyLoading={isAnyLoading}*/}
+              {/*  disabled={isAnyLoading}*/}
+              {/*>*/}
+              {/*  测试语言服务器*/}
+              {/*</BusinessActionButton>*/}
 
               {/* 设置按钮 */}
               {onSettingsClick && (

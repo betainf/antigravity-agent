@@ -46,7 +46,6 @@ fn main() {
         .invoke_handler(tauri::generate_handler![
             backup_profile,
             restore_profile,
-            list_backups,
             get_recent_accounts,
             collect_backup_contents,
             restore_backup_files,

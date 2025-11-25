@@ -22,14 +22,26 @@ export interface AntigravityAuthInfo {
  */
 export interface AntigravityAccount {
   /** 账户ID */
-  id?: string;
+  id: string;
 
   /** 账户名称 */
-  name?: string;
+  name: string;
 
   /** 邮箱地址 */
-  email?: string;
+  email: string;
 
-  /** 其他账户字段 */
-  [key: string]: unknown;
+  /** API密钥或访问令牌 */
+  api_key: string;
+
+  /** Base64 编码的头像URL */
+  profile_url: string;
+
+  /** 编码后的用户设置 */
+  user_settings: string;
+
+  /** 账户创建时间 */
+  created_at: string;
+
+  /** 最后切换时间 */
+  last_switched: string;
 }

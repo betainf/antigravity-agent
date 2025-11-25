@@ -2,9 +2,12 @@
 //! 负责 Antigravity 账户的切换、备份、恢复、清除等操作
 
 use rusqlite::{Connection, Result as SqlResult};
-use serde_json::Value;
+use serde_json::{Value, from_str};
 use tauri::State;
 use tracing::instrument;
+use std::fs;
+use std::path::PathBuf;
+use chrono::{DateTime, Local};
 
 /// 切换 Antigravity 账户
 #[tauri::command]
@@ -79,13 +82,186 @@ pub async fn switch_antigravity_account(
 #[tauri::command]
 #[instrument]
 pub async fn get_antigravity_accounts(
-    _state: State<'_, crate::AppState>,
+    state: State<'_, crate::AppState>,
 ) -> Result<Vec<crate::AntigravityAccount>, String> {
-  tracing::info!("获取所有 Antigravity 账户");
+    tracing::info!("📋 开始获取所有 Antigravity 账户");
 
-  // 这里应该从存储中加载账户列表
-    // 暂时返回空列表
-    Ok(vec![])
+    let start_time = std::time::Instant::now();
+
+    let result = async {
+        let mut accounts = Vec::new();
+
+        // 获取备份目录路径
+        let antigravity_dir = state.config_dir.join("antigravity-accounts");
+
+        if !antigravity_dir.exists() {
+            tracing::info!("📂 备份目录不存在，返回空列表");
+            return Ok(accounts);
+        }
+
+        // 读取目录中的所有 JSON 文件
+        let entries = fs::read_dir(&antigravity_dir)
+            .map_err(|e| format!("读取备份目录失败: {}", e))?;
+
+        for entry in entries {
+            let entry = entry.map_err(|e| format!("读取目录项失败: {}", e))?;
+            let path = entry.path();
+
+            // 只处理 JSON 文件
+            if path.extension().is_some_and(|ext| ext == "json") {
+                let file_name = match path.file_stem() {
+                    Some(name) => name.to_string_lossy().to_string(),
+                    None => continue,
+                };
+
+                tracing::debug!("📄 正在解析备份文件: {}", file_name);
+
+                // 读取并解析 JSON 文件
+                let content = fs::read_to_string(&path)
+                    .map_err(|e| format!("读取文件失败 {}: {}", file_name, e))?;
+
+                let backup_data: Value = from_str(&content)
+                    .map_err(|e| format!("解析 JSON 失败 {}: {}", file_name, e))?;
+
+                // 提取账户信息
+                let account = parse_backup_to_account(&backup_data, &file_name, &path)?;
+                accounts.push(account);
+
+                tracing::info!("✅ 成功解析账户: {}", file_name);
+            }
+        }
+
+        // 按最后修改时间排序（最新的在前）
+        accounts.sort_by(|a, b| b.last_switched.cmp(&a.last_switched));
+
+        tracing::info!(
+            "🎉 成功加载 {} 个账户",
+            accounts.len()
+        );
+
+        Ok(accounts)
+    }.await;
+
+    let duration = start_time.elapsed();
+
+    match result {
+        Ok(accounts) => {
+            tracing::info!(
+                duration_ms = duration.as_millis(),
+                account_count = accounts.len(),
+                "获取账户列表完成"
+            );
+            Ok(accounts)
+        }
+        Err(e) => {
+            tracing::error!(
+                error = %e,
+                duration_ms = duration.as_millis(),
+                "获取账户列表失败"
+            );
+            Err(e)
+        }
+    }
+}
+
+/// 将备份数据解析为账户对象
+fn parse_backup_to_account(
+    backup_data: &Value,
+    file_name: &str,
+    file_path: &PathBuf,
+) -> Result<crate::AntigravityAccount, String> {
+    // 提取邮箱
+    let email = backup_data
+        .get("account_email")
+        .and_then(|v| v.as_str())
+        .unwrap_or(file_name)
+        .to_string();
+
+    // 提取备份时间（如果存在）
+    let backup_time_str = backup_data
+        .get("backup_time")
+        .and_then(|v| v.as_str())
+        .unwrap_or("");
+
+    // 从文件修改时间获取 last_switched
+    let metadata = fs::metadata(file_path)
+        .map_err(|e| format!("获取文件元数据失败: {}", e))?;
+    let modified_time = metadata.modified()
+        .map_err(|e| format!("获取修改时间失败: {}", e))?;
+    let datetime: DateTime<Local> = DateTime::from(modified_time);
+    let last_switched = datetime.format("%Y-%m-%d %H:%M:%S").to_string();
+
+    // 从备份数据中提取认证状态信息
+    let auth_status = backup_data
+        .get("antigravityAuthStatus")
+        .and_then(|v| v.as_str());
+
+    // 解析认证状态 JSON（如果存在）
+    let (name, api_key) = if let Some(auth_json) = auth_status {
+        match from_str::<Value>(auth_json) {
+            Ok(auth_data) => {
+                let name = auth_data
+                    .get("name")
+                    .or_else(|| auth_data.get("email"))
+                    .and_then(|v| v.as_str())
+                    .unwrap_or(&email.split('@').next().unwrap_or(&email))
+                    .to_string();
+
+                let api_key = auth_data
+                    .get("apiKey")
+                    .or_else(|| auth_data.get("accessToken"))
+                    .and_then(|v| v.as_str())
+                    .unwrap_or("")
+                    .to_string();
+
+                (name, api_key)
+            }
+            Err(_) => {
+                // 解析失败，使用默认值
+                let name = email.split('@').next().unwrap_or(&email).to_string();
+                (name, "".to_string())
+            }
+        }
+    } else {
+        // 没有认证信息，使用默认值
+        let name = email.split('@').next().unwrap_or(&email).to_string();
+        (name, "".to_string())
+    };
+
+    // 提取用户设置
+    let user_settings = backup_data
+        .get("antigravityUserSettings.allUserSettings")
+        .and_then(|v| v.as_str())
+        .unwrap_or("")
+        .to_string();
+
+    // 提取头像 URL
+    let profile_url = backup_data
+        .get("antigravity.profileUrl")
+        .and_then(|v| v.as_str())
+        .unwrap_or("")
+        .to_string();
+
+    // 生成 ID（使用邮箱的哈希或直接使用邮箱）
+    let id = format!("account_{}", email);
+
+    // 创建时间（使用备份时间或文件时间）
+    let created_at = if !backup_time_str.is_empty() {
+        backup_time_str.to_string()
+    } else {
+        last_switched.clone()
+    };
+
+    Ok(crate::AntigravityAccount {
+        id,
+        name,
+        email,
+        api_key,
+        profile_url,
+        user_settings,
+        created_at,
+        last_switched,
+    })
 }
 
 /// 获取当前 Antigravity 信息

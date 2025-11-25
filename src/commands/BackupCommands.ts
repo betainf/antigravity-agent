@@ -6,14 +6,6 @@ import type { BackupData, RestoreResult } from './types/backup.types';
  */
 export class BackupCommands {
   /**
-   * 列出所有已备份的账户
-   * @returns 账户名列表
-   */
-  static async list(): Promise<string[]> {
-    return invoke('list_backups');
-  }
-
-  /**
    * 获取最近使用的账户列表（按文件修改时间排序）
    * @param limit 返回的最大数量（可选）
    * @returns 账户名列表

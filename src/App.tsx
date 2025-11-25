@@ -5,6 +5,7 @@ import { useUserManagement } from './modules/user-management/store';
 import { DATABASE_EVENTS, useDbMonitoringStore } from './modules/db-monitoring-store';
 import useConfigManager from './modules/config-management/useConfigStore';
 import { useAntigravityProcess } from './hooks/use-antigravity-process';
+import { useAntigravityIsRunning } from './hooks/useAntigravityIsRunning';
 import BusinessManageSection from './components/business/ManageSection';
 import StatusNotification from './components/StatusNotification';
 import Toolbar from './components/Toolbar';
@@ -59,8 +60,16 @@ function AppContent() {
     return addListener(DATABASE_EVENTS.DATA_CHANGED, addCurrentUser)
   }, []);
 
+  // 启动 Antigravity 进程状态自动检查
+  const { startAutoCheck, stopAutoCheck } = useAntigravityIsRunning();
+
+  useEffect(() => {
+    startAutoCheck();
+    return () => stopAutoCheck();
+  }, []);
+
   // 配置管理
-  const { isImporting, isExporting, hasUserData, isCheckingData, importConfig, exportConfig } = useConfigManager(
+  const { isImporting, isExporting, isCheckingData, importConfig, exportConfig } = useConfigManager(
     showStatus,
     showPasswordDialog,
     closePasswordDialog,
@@ -160,7 +169,7 @@ function AppContent() {
       <Toolbar
         onImport={importConfig}
         onExport={exportConfig}
-        hasUserData={hasUserData}
+        // hasUserData 移除了，现在从内部 store 获取
         isCheckingData={isCheckingData}
         onBackupAndRestart={backupAndRestartAntigravity}
         loadingState={loadingState}
