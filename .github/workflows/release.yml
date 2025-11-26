@@ -72,21 +72,8 @@ jobs:
           node-version: 'lts/*'
           cache: 'npm'
 
-    
       - name: Install frontend dependencies
         run: npm ci
-
-      - name: Cache Rust build
-        uses: actions/cache@v4
-        with:
-          path: |
-            ~/.cargo/registry
-            ~/.cargo/git
-            ${{ github.workspace }}/src-tauri/target
-          key: ${{ runner.os }}-rust-${{ matrix.platform }}-${{ hashFiles('src-tauri/Cargo.lock') }}
-          restore-keys: |
-            ${{ runner.os }}-rust-${{ matrix.platform }}-
-            ${{ runner.os }}-rust-
 
       - name: Build the app
         uses: tauri-apps/tauri-action@v0
@@ -106,7 +93,7 @@ jobs:
             
             ### macOS
             - **Apple Silicon**: `Antigravity Agent_aarch64.dmg`
-            - **Intel Mac**: `Antigravity Agent_x64.dmg`
+            - **Intel Mac**: `Antigravity Agent_x86_64.dmg`
             
             ### Linux
             - **AppImage**: `antigravity-agent_x.x.x_amd64.AppImage` - 通用格式
@@ -132,6 +119,18 @@ jobs:
           if [ -f "Antigravity Agent.app.tar.gz.sig" ]; then
             mv "Antigravity Agent.app.tar.gz.sig" "Antigravity Agent_${{ matrix.arch }}.app.tar.gz.sig"
           fi
+
+      - name: Delete old macOS artifacts from release
+        if: startsWith(matrix.platform, 'macos')
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        shell: bash
+        continue-on-error: true
+        run: |
+          # 删除 tauri-action 自动上传的旧文件（不带架构后缀的版本）
+          gh release delete-asset ${{ github.ref_name }} "Antigravity Agent.app.tar.gz" --yes || true
+          gh release delete-asset ${{ github.ref_name }} "Antigravity Agent.app.tar.gz.sig" --yes || true
+          echo "✅ Deleted old macOS artifacts (if existed)"
 
       - name: Upload renamed macOS artifacts
         if: startsWith(matrix.platform, 'macos')

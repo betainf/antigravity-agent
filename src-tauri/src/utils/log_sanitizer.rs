@@ -21,7 +21,7 @@ impl Default for LogSanitizer {
             email_regex: Regex::new(r"(?i)[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}").unwrap(),
             api_key_regex: Regex::new(r"(?i)(?P<prefix>key|token|secret|api[-_]?key|access[-_]?token)[\s=:]+(?P<key>[a-zA-Z0-9+/=_-]{20,})").unwrap(),
             user_home_regex: Regex::new(r"(?P<prefix>/home/[^/]+)").unwrap(),
-            windows_user_regex: Regex::new(r"(?P<prefix>C:\\\\Users\\\\[^\\]+)").unwrap(),
+            windows_user_regex: Regex::new(r"C:\\\\Users\\\\[^\\\\]+").unwrap(),
         }
     }
 }
@@ -91,7 +91,8 @@ impl LogSanitizer {
     /// ```
     /// "/home/user/.antigravity-agent" → "~/.antigravity-agent"
     /// "/home/user/Documents/file.txt" → "~/Documents/file.txt"
-    /// "C:\\Users\\LL\\AppData" → "~\\AppData"
+    /// "C:\\Users\\Kiki\\AppData" → "~\\AppData"
+    /// "C:\\Users\\Kiki\\AppData\\Roaming\\Antigravity" → "~\\AppData\\Roaming\\Antigravity"
     /// ```
     pub fn sanitize_paths(&self, input: &str) -> String {
         let mut result = input.to_string();
@@ -101,10 +102,19 @@ impl LogSanitizer {
             "~"
         }).to_string();
 
-        // 处理 Windows 路径
+        // 处理 Windows 路径 - 修正正则表达式匹配用户名
         result = self.windows_user_regex.replace_all(&result, |_caps: &regex::Captures| {
             "~"
         }).to_string();
+
+        // 额外处理一些可能遗漏的路径格式
+        if result.contains("C:\\Users\\") {
+            // 使用更简单的替换方式
+            result = regex::Regex::new(r"C:\\\\Users\\\\[^\\\\]+")
+                .unwrap()
+                .replace_all(&result, "~")
+                .to_string();
+        }
 
         result
     }

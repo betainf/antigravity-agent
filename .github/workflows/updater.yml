@@ -4,6 +4,11 @@ on:
   release:
     types: [published]
   workflow_dispatch:
+    inputs:
+      tag:
+        description: 'Release tag (e.g., v1.0.0)'
+        required: true
+        type: string
 
 concurrency:
   group: updater-${{ github.ref }}
@@ -20,14 +25,25 @@ jobs:
         run: |
           sudo apt-get update
           sudo apt-get install -y jq
-          type -p gh >/dev/null || curl -fsSL https://github.com/cli/cli/releases/latest/download/gh_$(uname -s | tr '[:upper:]' '[:lower:]')_amd64.tar.gz \
-            | tar xz && sudo mv gh_*/bin/gh /usr/local/bin
+          # GitHub CLI 通常已经预装在 GitHub Actions runner 中
+          if ! command -v gh &> /dev/null; then
+            curl -fsSL https://cli.github.com/packages/githubcli-archive-keyring.gpg | sudo dd of=/usr/share/keyrings/githubcli-archive-keyring.gpg
+            echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/githubcli-archive-keyring.gpg] https://cli.github.com/packages stable main" | sudo tee /etc/apt/sources.list.d/github-cli.list > /dev/null
+            sudo apt-get update
+            sudo apt-get install -y gh
+          fi
 
       - name: Download release assets (.sig and bundles)
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          TAG="${{ github.event.release.tag_name }}"
+          # 获取 tag：自动触发时从 event 获取，手动触发时从 input 获取
+          TAG="${{ github.event.release.tag_name || inputs.tag }}"
+          if [ -z "$TAG" ]; then
+            echo "❌ Error: No tag specified"
+            exit 1
+          fi
+          echo "📦 Downloading assets for tag: $TAG"
           mkdir -p assets
           cd assets
           gh release download "$TAG" --repo "${{ github.repository }}" --clobber
@@ -35,12 +51,14 @@ jobs:
       - name: Generate latest.json
         env:
           REPO: ${{ github.repository }}
-          TAG: ${{ github.event.release.tag_name }}
+          TAG: ${{ github.event.release.tag_name || inputs.tag }}
+          RELEASE_BODY: ${{ github.event.release.body || '' }}
+          PUB_DATE: ${{ github.event.release.published_at || '' }}
         run: |
           cd assets
 
-          VERSION="${TAG}"
-          PUB_DATE="${{ github.event.release.published_at || '' }}"
+          VERSION="$TAG"
+          # 如果没有 published_at，使用当前时间
           if [ -z "$PUB_DATE" ]; then
             PUB_DATE="$(date -u +"%Y-%m-%dT%H:%M:%SZ")"
           fi
@@ -55,7 +73,7 @@ jobs:
           # macOS: 文件名包含空格，架构后缀在重命名步骤中添加
           MAC_ARM_FILE="Antigravity Agent_aarch64.app.tar.gz"
           MAC_ARM_SIG_FILE="$MAC_ARM_FILE.sig"
-          MAC_X64_FILE="Antigravity Agent_x64.app.tar.gz"
+          MAC_X64_FILE="Antigravity Agent_x86_64.app.tar.gz"
           MAC_X64_SIG_FILE="$MAC_X64_FILE.sig"
 
           # Linux: Tauri 使用 Debian 命名规范 (amd64 而非 x86_64)
@@ -83,31 +101,42 @@ jobs:
           URL_MAC_X64="$BASE_URL/${MAC_X64_FILE// /%20}"
           URL_LINUX="$BASE_URL/$LINUX_FILE"
 
-          cat > latest.json << JSON
-          {
-            "version": "$VERSION",
-            "notes": "${{ github.event.release.body || '' }}",
-            "pub_date": "$PUB_DATE",
-            "platforms": {
-              "windows-x86_64": {
-                "signature": "$SIG_WIN",
-                "url": "$URL_WIN"
-              },
-              "darwin-aarch64": {
-                "signature": "$SIG_MAC_ARM",
-                "url": "$URL_MAC_ARM"
-              },
-              "darwin-x86_64": {
-                "signature": "$SIG_MAC_X64",
-                "url": "$URL_MAC_X64"
-              },
-              "linux-x86_64": {
-                "signature": "$SIG_LINUX",
-                "url": "$URL_LINUX"
+          # 使用 jq 安全生成 JSON，正确处理特殊字符和转义
+          jq -n \
+            --arg version "$VERSION" \
+            --arg notes "$RELEASE_BODY" \
+            --arg pub_date "$PUB_DATE" \
+            --arg sig_win "$SIG_WIN" \
+            --arg url_win "$URL_WIN" \
+            --arg sig_mac_arm "$SIG_MAC_ARM" \
+            --arg url_mac_arm "$URL_MAC_ARM" \
+            --arg sig_mac_x64 "$SIG_MAC_X64" \
+            --arg url_mac_x64 "$URL_MAC_X64" \
+            --arg sig_linux "$SIG_LINUX" \
+            --arg url_linux "$URL_LINUX" \
+            '{
+              version: $version,
+              notes: $notes,
+              pub_date: $pub_date,
+              platforms: {
+                "windows-x86_64": {
+                  signature: $sig_win,
+                  url: $url_win
+                },
+                "darwin-aarch64": {
+                  signature: $sig_mac_arm,
+                  url: $url_mac_arm
+                },
+                "darwin-x86_64": {
+                  signature: $sig_mac_x64,
+                  url: $url_mac_x64
+                },
+                "linux-x86_64": {
+                  signature: $sig_linux,
+                  url: $url_linux
+                }
               }
-            }
-          }
-          JSON
+            }' > latest.json
 
           echo "✅ Generated latest.json:"
           cat latest.json
@@ -116,6 +145,6 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          TAG="${{ github.event.release.tag_name }}"
+          TAG="${{ github.event.release.tag_name || inputs.tag }}"
           cd assets
           gh release upload "$TAG" latest.json --repo "${{ github.repository }}" --clobber

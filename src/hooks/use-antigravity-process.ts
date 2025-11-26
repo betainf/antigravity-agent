@@ -32,7 +32,7 @@ export function useAntigravityProcess(): UseAntigravityProcessResult {
                 module: 'ProcessManager',
                 action: 'backup_and_restart_start'
             });
-          toast.loading('正在备份当前用户并注销...');
+          toast.loading('正在备份当前用户并注销...', {duration: 1});
 
             logger.info('调用 AntigravityService 备份重启服务', {
                 module: 'ProcessManager',

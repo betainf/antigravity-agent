@@ -2,7 +2,7 @@ use dirs::*;
 /// 统一的跨平台路径处理工具
 ///
 /// 提供跨平台兼容的路径处理方法，避免硬编码路径
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 
 /// 应用程序相关路径管理器
 pub struct AppPaths;
@@ -23,9 +23,11 @@ impl AppPaths {
         };
 
       match &result {
-        Some(path) => tracing::info!("🔍 检测 Antigravity 数据目录: {}",
-                path.display()),
-        None => tracing::info!("🔍 检测 Antigravity 数据目录: None"),
+        Some(path) => {
+          let sanitized_path = sanitize_user_path(path);
+          tracing::info!("🔍 检测 Antigravity 数据目录: {}", sanitized_path);
+        }
+        None => tracing::info!("🔍 检测 Antigravity 数据目录: 未找到"),
       }
 
         result
@@ -216,5 +218,43 @@ impl AppPaths {
     fn get_applications_dir() -> Option<PathBuf> {
         None
     }
+}
+
+/// 跨平台路径脱敏函数
+/// 将用户名替换为 ****，支持 Windows、macOS、Linux
+fn sanitize_user_path(path: &Path) -> String {
+    let path_str = path.to_string_lossy();
+
+    if std::env::consts::OS == "windows" {
+        // Windows: C:\Users\Kiki\AppData\Roaming\... -> C:\Users\****\AppData\Roaming\...
+        if let Some(start) = path_str.find("\\Users\\") {
+            let user_path_start = start + 7; // 跳过 "\Users\"
+            if let Some(end) = path_str[user_path_start..].find('\\') {
+                let end = user_path_start + end;
+                return format!("{}\\Users\\****\\{}", &path_str[..start], &path_str[end + 1..]);
+            }
+        }
+    } else if std::env::consts::OS == "macos" {
+        // macOS: /Users/kiki/Library/Application Support/... -> /Users/****/Library/Application Support/...
+        if let Some(start) = path_str.find("/Users/") {
+            let user_path_start = start + 7; // 跳过 "/Users/"
+            if let Some(end) = path_str[user_path_start..].find('/') {
+                let end = user_path_start + end;
+                return format!("{}/Users/****/{}", &path_str[..start], &path_str[end + 1..]);
+            }
+        }
+    } else if std::env::consts::OS == "linux" {
+        // Linux: /home/user/.config/... -> /home/****/.config/...
+        if let Some(start) = path_str.find("/home/") {
+            let user_path_start = start + 6; // 跳过 "/home/"
+            if let Some(end) = path_str[user_path_start..].find('/') {
+                let end = user_path_start + end;
+                return format!("{}/home/****/{}", &path_str[..start], &path_str[end + 1..]);
+            }
+        }
+    }
+
+    // 如果没有匹配到任何模式，返回原路径
+    path_str.to_string()
 }
 

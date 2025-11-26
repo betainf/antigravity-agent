@@ -5,15 +5,41 @@ use dirs;
 use std::fs;
 use crate::utils::log_sanitizer::LogSanitizer;
 
+/// 获取日志目录路径
+/// 与 state.rs 中的配置目录保持一致
+fn get_log_directory() -> std::path::PathBuf {
+    if cfg!(windows) {
+        // Windows: 优先使用 APPDATA 环境变量
+        std::env::var_os("APPDATA")
+            .map(|appdata| std::path::PathBuf::from(appdata).join(".antigravity-agent"))
+            .or_else(|| {
+                // 备用方案：通过用户主目录构建 AppData\Roaming 路径
+                dirs::home_dir().map(|home| {
+                    home.join("AppData")
+                        .join("Roaming")
+                        .join(".antigravity-agent")
+                })
+            })
+            .or_else(|| {
+                // 最后备用：使用系统标准配置目录
+                dirs::config_dir().map(|config| config.join(".antigravity-agent"))
+            })
+            .unwrap_or_else(|| std::path::PathBuf::from(".antigravity-agent"))
+            .join("logs")
+    } else {
+        // macOS/Linux: 使用标准配置目录
+        dirs::config_dir()
+            .unwrap_or_else(|| std::path::PathBuf::from("."))
+            .join(".antigravity-agent")
+            .join("logs")
+    }
+}
+
 /// 获取日志文件信息
 /// 返回日志文件路径、大小等信息，用于前端显示状态
 #[tauri::command]
 pub async fn get_log_info() -> Result<LogInfo, String> {
-    let log_dir = dirs::config_dir()
-        .unwrap_or_else(|| std::path::PathBuf::from("."))
-        .join("antigravity-agent")
-        .join("logs");
-
+    let log_dir = get_log_directory();
     let log_file = log_dir.join("antigravity-agent.log");
 
     if log_file.exists() {
@@ -155,11 +181,7 @@ pub async fn encrypt_config_data(json_data: String, password: String) -> Result<
 #[tauri::command]
 pub async fn clear_logs() -> Result<String, String> {
     crate::log_async_command!("clear_logs", async {
-        let log_dir = dirs::config_dir()
-            .unwrap_or_else(|| std::path::PathBuf::from("."))
-            .join("antigravity-agent")
-            .join("logs");
-
+        let log_dir = get_log_directory();
         let log_file = log_dir.join("antigravity-agent.log");
 
         if log_file.exists() {
