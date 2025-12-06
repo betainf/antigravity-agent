@@ -52,20 +52,4 @@ export class SilentStartService {
     }
   }
 
-  /**
-   * 获取所有设置中的静默启动状态（从完整设置中获取）
-   */
-  static async getSettingsFromAllSettings(): Promise<boolean> {
-    try {
-      const allSettings = await invoke<any>('get_all_settings');
-      return allSettings.silent_start_enabled || false;
-    } catch (error) {
-      logger.warn('从完整设置获取静默启动状态失败', {
-        module: 'SilentStartService',
-        action: 'get_from_all_settings_failed',
-        error: error instanceof Error ? error.message : String(error)
-      });
-      return false;
-    }
-  }
 }

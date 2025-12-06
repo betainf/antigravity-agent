@@ -2,7 +2,6 @@ import React, {useEffect, useState} from 'react';
 import {AlertCircle, Check, FileCode, Info, Monitor, Settings, VolumeX} from 'lucide-react';
 import {open} from '@tauri-apps/plugin-dialog';
 import {getVersion} from '@tauri-apps/api/app';
-import {AntigravityPathService} from '../../services/antigravity-path-service';
 import {BaseDialog, BaseDialogContent, BaseDialogHeader, BaseDialogTitle,} from '@/components/base-ui/BaseDialog';
 import {BaseButton} from '@/components/base-ui/BaseButton';
 import {BaseSpinner} from '@/components/base-ui/BaseSpinner';
@@ -10,6 +9,7 @@ import {SystemTrayService} from '../../services/system-tray-service';
 import {SilentStartService} from '../../services/silent-start-service';
 import {cn} from '@/utils/utils';
 import {logger} from '@/utils/logger';
+import {PlatformCommands} from "@/commands/PlatformCommands.ts";
 
 interface BusinessSettingsDialogProps {
   isOpen: boolean;
@@ -61,11 +61,11 @@ const BusinessSettingsDialog: React.FC<BusinessSettingsDialogProps> = ({
   const loadCurrentPaths = async () => {
     setIsLoading(true);
     try {
-      const paths = await AntigravityPathService.getCurrentPaths();
+      const paths = await PlatformCommands.getCurrentPaths();
       let finalExecPath = paths.executablePath;
 
       if (!finalExecPath) {
-        const detectedExec = await AntigravityPathService.detectExecutable();
+        const detectedExec = await PlatformCommands.detectExecutable();
         if (detectedExec.found && detectedExec.path) {
           finalExecPath = detectedExec.path + ' (自动检测)';
         }
@@ -155,9 +155,9 @@ const BusinessSettingsDialog: React.FC<BusinessSettingsDialogProps> = ({
       });
 
       if (result && typeof result === 'string') {
-        const valid = await AntigravityPathService.validateExecutable(result);
+        const valid = await PlatformCommands.validateExecutable(result);
         if (valid) {
-          await AntigravityPathService.saveExecutable(result);
+          await PlatformCommands.saveExecutable(result);
           setExecPath(result);
           showMessage('可执行文件路径已更新', 'success');
         } else {

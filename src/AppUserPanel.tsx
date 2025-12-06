@@ -20,7 +20,7 @@ export function AppUserPanel() {
   const [selectedUser, setSelectedUser] = useState<AntigravityAccount | null>(null);
   const antigravityAccount = useAntigravityAccount();
   const languageServerUserInfo = useLanguageServerUserInfo();
-  const { isLanguageServerStateInitialized } = useLanguageServerState();
+  const languageServerState = useLanguageServerState();
   const currentAntigravityAccount = useCurrentAntigravityAccount();
   const appGlobalLoader = useAppGlobalLoader();
 
@@ -51,13 +51,13 @@ export function AppUserPanel() {
   }, []);
 
   useEffect(() => {
-    if (isLanguageServerStateInitialized) {
+    if (languageServerState.initialized) {
       antigravityAccount.users.forEach(user => {
         languageServerUserInfo.fetchData(user)
       })
     }
     antigravityAccount.updateCurrentAccount()
-  }, [antigravityAccount.users, isLanguageServerStateInitialized]);
+  }, [antigravityAccount.users, languageServerState.initialized]);
 
   // 获取当前用户的配额数据
   const currentQuotaData = currentAntigravityAccount && languageServerUserInfo.users[currentAntigravityAccount?.id]?.userStatus

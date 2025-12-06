@@ -1,17 +1,16 @@
-import React, { useCallback, useEffect, useState } from 'react';
-import { useDevToolsShortcut } from './hooks/useDevToolsShortcut';
-import { useAntigravityAccount } from './modules/use-antigravity-account.ts';
-import { DATABASE_EVENTS, useDbMonitoringStore } from './modules/db-monitoring-store';
-import { useAntigravityIsRunning } from './hooks/useAntigravityIsRunning';
-import { Toaster } from 'react-hot-toast';
+import React, {useEffect, useState} from 'react';
+import {useDevToolsShortcut} from './hooks/useDevToolsShortcut';
+import {useAntigravityAccount} from './modules/use-antigravity-account.ts';
+import {DATABASE_EVENTS, useDbMonitoringStore} from './modules/db-monitoring-store';
+import {useAntigravityIsRunning} from './hooks/useAntigravityIsRunning';
+import {Toaster} from 'react-hot-toast';
 import AppToolbar from './AppToolbar.tsx';
-import { TooltipProvider } from './components/ui/tooltip';
-import { AntigravityPathService } from './services/antigravity-path-service';
-import { useLanguageServerState } from "@/hooks/use-language-server-state.ts";
-import { logger } from './utils/logger';
-import { AppUserPanel } from "@/AppUserPanel.tsx";
-import { AppGlobalLoader } from "@/AppGlobalLoader.tsx";
-import { AntigravityStatusScreen } from "@/components/business/AntigravityStatusScreen";
+import {TooltipProvider} from './components/ui/tooltip';
+import {useLanguageServerState} from "@/hooks/use-language-server-state.ts";
+import {AppUserPanel} from "@/AppUserPanel.tsx";
+import {AppGlobalLoader} from "@/AppGlobalLoader.tsx";
+import {AntigravityStatusScreen} from "@/components/business/AntigravityStatusScreen";
+import {PlatformCommands} from "@/commands/PlatformCommands.ts";
 
 function App() {
   // ========== 应用状态 ==========
@@ -46,52 +45,27 @@ function App() {
   // 处理语言服务的状态
   useEffect(() => {
     if (antigravityIsRunning.isRunning) {
-      languageServerState.initializeLanguageServerState();
+      languageServerState.initialize();
     } else {
-      languageServerState.clearLanguageServerState();
+      languageServerState.clear();
     }
   }, [antigravityIsRunning.isRunning]);
 
   // ========== 初始化启动流程 ==========
-  const initializeApp = useCallback(async () => {
+  const initializeApp = async () => {
     try {
-      logger.info('开始检测 Antigravity 安装', {
-        module: 'AppState',
-        action: 'detect_antigravity'
-      });
-
-      // 只检测数据库路径
-      const pathInfo = await AntigravityPathService.detectAntigravityPath();
-
-      if (pathInfo.found) {
-        logger.info('Antigravity 数据库检测成功', {
-          module: 'AppState',
-          action: 'detect_success',
-          pathFound: pathInfo.found
-        });
-        setIsDetecting(false);
-      } else {
-        logger.error('Antigravity 数据库未找到，应用无法使用', {
-          module: 'AppState',
-          action: 'detect_failed',
-          pathFound: pathInfo.found
-        });
-        setIsDetecting(false);
-      }
+      await PlatformCommands.detectInstallation()
     } catch (error) {
-      logger.error('启动检测失败', {
-        module: 'AppState',
-        action: 'detect_error',
-        error: error instanceof Error ? error.message : String(error)
-      });
+
+    } finally {
       setIsDetecting(false);
     }
-  }, []);
+  };
 
   // 组件启动时执行初始化
   useEffect(() => {
     initializeApp();
-  }, [initializeApp]);
+  }, []);
 
   // ========== 渲染逻辑 ==========
   if (isDetecting) {

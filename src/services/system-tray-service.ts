@@ -61,43 +61,4 @@ export class SystemTrayService {
     }
   }
 
-  /**
-   * 同步系统托盘状态（确保状态一致性）
-   * 后端会检查所有状态并自动修复不一致问题
-   */
-  static async syncSystemTrayState(): Promise<string> {
-    try {
-      return await invoke<string>('sync_system_tray_state');
-    } catch (error) {
-      throw new Error(`同步状态失败: ${error}`);
-    }
-  }
-
-  /**
-   * 获取系统托盘完整状态信息（用于调试）
-   */
-  static async getSystemTrayFullStatus(): Promise<SystemTrayFullStatus> {
-    try {
-      return await invoke<SystemTrayFullStatus>('get_system_tray_status');
-    } catch (error) {
-      logger.warn('获取系统托盘完整状态失败', {
-        module: 'SystemTrayService',
-        action: 'get_full_status_failed',
-        error: error instanceof Error ? error.message : String(error)
-      });
-      return {
-        runtime_enabled: false,
-        tray_exists: false,
-        saved_state: true,
-        is_consistent: false
-      };
-    }
-  }
-
-  /**
-   * 检查系统托盘是否启用（运行时状态）
-   */
-  static async isSystemTrayEnabled(): Promise<boolean> {
-    return await invoke<boolean>('is_system_tray_enabled');
-  }
 }
