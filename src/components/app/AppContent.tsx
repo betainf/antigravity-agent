@@ -1,20 +1,16 @@
-import React, {useCallback, useEffect, useState} from "react";
+import React, {useEffect, useState} from "react";
 import type {AntigravityAccount} from "@/commands/types/account.types.ts";
-import BusinessUserDetail from "@/components/business/UserDetail.tsx";
+import BusinessUserDetail from "@/components/business/AccountDetailModal.tsx";
 import {useAntigravityAccount, useCurrentAntigravityAccount} from "@/modules/use-antigravity-account.ts";
 import {useAvailableModels} from "@/modules/use-available-models.ts";
-import {BaseTooltip} from "@/components/base-ui/BaseTooltip.tsx";
-import BusinessActionButton from "@/components/business/ActionButton.tsx";
-import {Trash2} from "lucide-react";
 
 import BusinessConfirmDialog from "@/components/business/ConfirmDialog.tsx";
 import toast from 'react-hot-toast';
-import {QuotaDashboard} from "@/components/business/QuotaDashboard";
-import {UserListItem} from "@/components/business/UserListItem.tsx";
-import {maskEmail} from "@/utils/username-masking.ts";
+import {maskEmail, maskName} from "@/utils/username-masking.ts";
 import {useAppGlobalLoader} from "@/modules/use-app-global-loader.ts";
+import {AccountSessionListCard} from "@/components/business/AccountSessionListCard.tsx";
 
-export function AppUserPanel() {
+export function AppContent() {
   const [isUserDetailOpen, setIsUserDetailOpen] = useState(false);
   const [selectedUser, setSelectedUser] = useState<AntigravityAccount | null>(null);
   const antigravityAccount = useAntigravityAccount();
@@ -23,15 +19,15 @@ export function AppUserPanel() {
   const appGlobalLoader = useAppGlobalLoader();
 
   // 用户详情处理
-  const handleUserClick = useCallback((user: AntigravityAccount) => {
+  const handleUserClick = (user: AntigravityAccount) => {
     setSelectedUser(user);
     setIsUserDetailOpen(true);
-  }, []);
+  };
 
-  const handleUserDetailClose = useCallback(() => {
+  const handleUserDetailClose = () => {
     setIsUserDetailOpen(false);
     setSelectedUser(null);
-  }, []);
+  };
 
 
   // 组件挂载时获取用户列表
@@ -57,30 +53,26 @@ export function AppUserPanel() {
 
   const [isClearDialogOpen, setIsClearDialogOpen] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
-  const [backupToDelete, setBackupToDelete] = useState<string | null>(null);
+  const [accountToDelete, setAccountToDelete] = useState<string | null>(null);
 
-  const handleDeleteBackup = (backupName: string) => {
-    setBackupToDelete(backupName);
+  const handleDeleteBackup = (user: AntigravityAccount) => {
+    setAccountToDelete(user.email);
     setDeleteDialogOpen(true);
   };
 
-  const confirmDeleteBackup = async () => {
-    if (!backupToDelete) return;
+  const confirmDeleteAccount = async () => {
+    if (!accountToDelete) return;
 
-    try {
-      await antigravityAccount.delete(backupToDelete);
-      toast.success(`备份 "${backupToDelete}" 删除成功`);
-      setDeleteDialogOpen(false);
-      setBackupToDelete(null);
-    } catch (error) {
-      toast.error(`删除备份失败: ${error}`);
-    }
+    await antigravityAccount.delete(accountToDelete);
+    toast.success(`账户 "${accountToDelete}" 删除成功`);
+    setDeleteDialogOpen(false);
+    setAccountToDelete(null);
   };
 
-  const handleSwitchAccount = async (backupName: string) => {
+  const handleSwitchAccount = async (user: AntigravityAccount) => {
     try {
-      appGlobalLoader.open({label: `正在切换到用户: ${maskEmail(backupName)}...`});
-      await antigravityAccount.switchUser(backupName);
+      appGlobalLoader.open({label: `正在切换到用户: ${maskEmail(user.email)}...`});
+      await antigravityAccount.switchUser(user.email);
     } finally {
       appGlobalLoader.close();
     }
@@ -106,23 +98,7 @@ export function AppUserPanel() {
 
   return (
     <>
-      <section className="card section-span-full mt-4">
-        <div className="flex justify-between items-center mb-4">
-          <h2>用户管理</h2>
-          {antigravityAccount.users.length > 0 && (
-            <BaseTooltip content="清空所有备份" side="bottom">
-              <BusinessActionButton
-                variant="destructive"
-                size="sm"
-                onClick={handleClearAllBackups}
-                icon={<Trash2 className="h-3 w-3" />}
-              >
-                {''}
-              </BusinessActionButton>
-            </BaseTooltip>
-          )}
-        </div>
-
+      <section className="card section-span-full">
         <div className={antigravityAccount.users.length === 0 ? "backup-list-empty" : "backup-list-vertical"}>
           {antigravityAccount.users.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-12 px-6 text-center">
@@ -139,18 +115,26 @@ export function AppUserPanel() {
               </p>
             </div>
           ) : (
-            <div className="space-y-2">
-              {antigravityAccount.users.map((user, index) => (
-                <UserListItem
-                  availableModels={availableModels.data[user.api_key]}
-                  key={`${user.email}-${index}`}
-                  user={user}
-                  isCurrent={currentAntigravityAccount?.email === user.email}
-                  onSelect={handleUserClick}
-                  onSwitch={handleSwitchAccount}
-                  onDelete={handleDeleteBackup}
+            <div className="flex flex-row gap-2 p-2">
+              {antigravityAccount.users.map((user, index) => {
+                const model = availableModels.data[user.api_key]
+                const geminiQuota = model?.models["gemini-3-pro-high"].quotaInfo.remainingFraction || 0
+                const claudeQuota = model?.models["claude-sonnet-4-5"].quotaInfo.remainingFraction || 0
+
+                return <AccountSessionListCard
+                  geminiQuota={geminiQuota}
+                  claudeQuota={claudeQuota}
+                  key={user.id}
+                  isCurrentUser={currentAntigravityAccount?.id === user.id}
+                  email={maskEmail(user.email)}
+                  nickName={maskName(user.name)}
+                  userAvatar={user.profile_url}
+                  onSelect={() => handleUserClick(user)}
+                  onSwitch={() => handleSwitchAccount(user)}
+                  onDelete={() => handleDeleteBackup(user)}
                 />
-              ))}
+
+              })}
             </div>
           )}
         </div>
@@ -173,9 +157,9 @@ export function AppUserPanel() {
       <BusinessConfirmDialog
         isOpen={deleteDialogOpen}
         onOpenChange={setDeleteDialogOpen}
-        title="确认删除备份"
-        description={`确定要删除备份 "${backupToDelete}" 吗？此操作无法撤销。`}
-        onConfirm={confirmDeleteBackup}
+        title="确认删除账户"
+        description={`确定要删除账户 "${accountToDelete}" 吗？此操作无法撤销。`}
+        onConfirm={confirmDeleteAccount}
         onCancel={() => setDeleteDialogOpen(false)}
         variant="destructive"
         isLoading={false}

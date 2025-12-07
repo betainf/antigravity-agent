@@ -1,7 +1,7 @@
 ﻿import React from 'react';
 import {useAppGlobalLoader} from "@/modules/use-app-global-loader.ts";
 
-export const AppGlobalLoader = () => {
+export const AppLoader = () => {
   const loader = useAppGlobalLoader();
 
   // 只有当loading为true时才显示加载器

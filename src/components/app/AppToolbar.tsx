@@ -1,25 +1,27 @@
 import React, {useCallback, useState} from 'react';
 import {Download, Plus, Upload} from 'lucide-react';
-import BusinessUpdateDialog from './components/business/UpdateDialog.tsx';
-import BusinessConfirmDialog from './components/business/ConfirmDialog.tsx';
-import BusinessActionButton from './components/business/ActionButton.tsx';
-import ToolbarTitle from './components/ui/toolbar-title.tsx';
-import {useUpdateChecker} from './hooks/useUpdateChecker.ts';
+import BusinessUpdateDialog from '../business/UpdateDialog.tsx';
+import BusinessConfirmDialog from '../business/ConfirmDialog.tsx';
+import BusinessActionButton from '../business/ActionButton.tsx';
+import ToolbarTitle from '../ui/toolbar-title.tsx';
+import {useUpdateChecker} from '../../hooks/useUpdateChecker.ts';
 import {useAntigravityAccount} from '@/modules/use-antigravity-account.ts';
-import {logger} from './utils/logger.ts';
+import {logger} from '../../utils/logger.ts';
 import toast from 'react-hot-toast';
 import {useImportExportAccount} from "@/modules/use-import-export-accounts.ts";
 import {useAntigravityProcess} from "@/hooks/use-antigravity-process.ts";
-import ImportPasswordDialog from "@/components/ImportPasswordDialog.tsx";
+import {ImportPasswordDialog} from "@/components/ImportPasswordDialog.tsx";
 import ExportPasswordDialog from "@/components/ExportPasswordDialog.tsx";
 import BusinessSettingsDialog from "@/components/business/SettingsDialog.tsx";
+import {Modal} from 'antd';
+
+const {confirm} = Modal;
 
 const AppToolbar = () => {
 
   // ========== 应用状态 ==========
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
 
-  
   const antigravityAccount = useAntigravityAccount();
   const importExportAccount = useImportExportAccount();
   // 使用单独的选择器避免无限循环
@@ -69,32 +71,25 @@ const AppToolbar = () => {
   
   // 处理登录新账户按钮点击
   const handleBackupAndRestartClick = () => {
-    logger.info('用户点击登录新账户按钮，显示确认对话框', {
-      module: 'AppToolbar',
-      action: 'backup_and_restart_click'
-    });
-
-    setConfirmDialog({
-      isOpen: true,
+    confirm({
       title: '登录新账户',
-      description: `确定要关闭 Antigravity 并登录新账户吗？
+      content: <p className={"wrap-break-word whitespace-pre-line"}>
+        {`确定要关闭 Antigravity 并登录新账户吗？
 
 此操作将会：
 1. 关闭所有 Antigravity 进程
-2. 自动备份当前账户信息
-3. 清除 Antigravity 用户信息
-4. 自动重新启动 Antigravity
+2. 清除 Antigravity 用户信息
+3. 自动重新启动 Antigravity
 
-登录新账户后点击 "刷新" 即可保存新账户
-注意：系统将自动启动 Antigravity，请确保已保存所有重要工作`,
-      onConfirm: async () => {
-        logger.info('用户确认登录新账户操作', {
-          module: 'AppToolbar',
-        action: 'backup_and_restart_confirmed'
-      });
-        setConfirmDialog(prev => ({ ...prev, isOpen: false }));
+注意：系统将自动启动 Antigravity，请确保已保存所有重要工作`}
+      </p>,
+      onOk() {
+        setConfirmDialog(prev => ({...prev, isOpen: false}));
         backupAndRestartAntigravity();
-      }
+      },
+      onCancel() {
+        setConfirmDialog(prev => ({...prev, isOpen: false}));
+      },
     });
   };
 
@@ -181,7 +176,7 @@ const AppToolbar = () => {
                 loadingText="处理中..."
                 isAnyLoading={isAnyLoading}
               >
-                登录新账户
+                新账户
               </BusinessActionButton>
 
               <BusinessActionButton
