@@ -1,7 +1,7 @@
 import React from 'react';
 import * as Dialog from '@radix-ui/react-dialog';
 import { X } from 'lucide-react';
-import { cn } from '@/utils/utils.ts';
+import { cn } from '@/lib/utils.ts';
 
 export interface BaseDialogProps {
   open?: boolean;

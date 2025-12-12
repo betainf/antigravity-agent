@@ -5,7 +5,7 @@
 
 import {create} from 'zustand';
 import {ProcessCommands} from '@/commands/ProcessCommands';
-import {logger} from '../utils/logger';
+import {logger} from '../lib/logger.ts';
 
 // 状态接口
 interface AntigravityIsRunningState {

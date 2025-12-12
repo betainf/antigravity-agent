@@ -7,7 +7,7 @@ import { create } from 'zustand';
 import { invoke } from '@tauri-apps/api/core';
 import {listen, UnlistenFn} from '@tauri-apps/api/event';
 import { EventEmitter } from 'events';
-import { logger } from '../utils/logger';
+import { logger } from '../lib/logger.ts';
 import {DbMonitorCommands} from "@/commands/DbMonitorCommands.ts";
 
 // 数据库变化事件数据接口

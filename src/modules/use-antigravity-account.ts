@@ -1,5 +1,5 @@
 import {create} from 'zustand';
-import {logger} from '../utils/logger.ts';
+import {logger} from '../lib/logger.ts';
 import {AccountCommands} from '@/commands/AccountCommands.ts';
 import type {AntigravityAccount} from '@/commands/types/account.types.ts';
 import {AccountManageCommands} from "@/commands/AccountManageCommands.ts";

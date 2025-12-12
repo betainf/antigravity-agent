@@ -1,5 +1,5 @@
 import {create} from 'zustand';
-import {logger} from '../utils/logger';
+import {logger} from '../lib/logger.ts';
 import toast from 'react-hot-toast';
 import {AccountManageCommands} from "@/commands/AccountManageCommands.ts";
 

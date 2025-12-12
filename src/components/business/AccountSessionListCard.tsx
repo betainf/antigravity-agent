@@ -1,6 +1,6 @@
 import React from 'react';
 import { motion } from 'framer-motion';
-import { cn } from "@/utils/utils.ts"; // 假设你有一个用于合并类名的工具函数
+import { cn } from "@/lib/utils.ts"; // 假设你有一个用于合并类名的工具函数
 import { Button, Space } from "antd";
 import { BaseAvatar } from "@/components/base-ui/BaseAvatar.tsx"; // 假设你的头像组件路径
 import { Crown, Gem } from 'lucide-react';

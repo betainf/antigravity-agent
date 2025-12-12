@@ -1,6 +1,6 @@
 import React from 'react';
 import { ArrowUpDown, Search, X } from 'lucide-react';
-import { cn } from '@/utils/utils.ts';
+import { cn } from '@/lib/utils.ts';
 import { BaseInput } from '@/components/base-ui/BaseInput';
 import type { UserTier } from '@/modules/use-account-addition-data.ts';
 import { Select as AntSelect } from 'antd';

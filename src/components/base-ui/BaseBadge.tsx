@@ -1,5 +1,5 @@
 import React from 'react';
-import { cn } from '@/utils/utils.ts';
+import { cn } from '@/lib/utils.ts';
 
 export interface BaseBadgeProps extends React.HTMLAttributes<HTMLDivElement> {
   variant?: 'default' | 'secondary' | 'destructive' | 'outline' | 'success' | 'warning';

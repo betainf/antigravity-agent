@@ -1,7 +1,7 @@
 import React, { ReactNode } from 'react';
 import { Loader2 } from 'lucide-react';
 import { StandardTooltip } from './tooltip';
-import { cn } from '@/utils/utils.ts';
+import { cn } from '@/lib/utils.ts';
 
 export interface ActionButtonProps {
     // 基础属性

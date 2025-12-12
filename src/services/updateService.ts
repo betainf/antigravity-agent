@@ -1,6 +1,6 @@
 import { check, Update, DownloadEvent } from '@tauri-apps/plugin-updater';
 import { relaunch } from '@tauri-apps/plugin-process';
-import { logger } from '../utils/logger';
+import { logger } from '../lib/logger.ts';
 
 export interface UpdateInfo {
     version: string;

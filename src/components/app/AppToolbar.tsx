@@ -6,7 +6,7 @@ import BusinessActionButton from '../business/ActionButton.tsx';
 import ToolbarTitle from '../ui/toolbar-title.tsx';
 import {useUpdateChecker} from '@/hooks/use-update-checker.ts';
 import {useAntigravityAccount} from '@/modules/use-antigravity-account.ts';
-import {logger} from '@/utils/logger.ts';
+import {logger} from '@/lib/logger.ts';
 import toast from 'react-hot-toast';
 import {useImportExportAccount} from "@/modules/use-import-export-accounts.ts";
 import {ImportPasswordDialog} from "@/components/ImportPasswordDialog.tsx";

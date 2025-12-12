@@ -1,6 +1,6 @@
 import React from 'react';
 import { motion, useReducedMotion } from 'framer-motion';
-import { cn } from '@/utils/utils.ts';
+import { cn } from '@/lib/utils.ts';
 import { Loader2 } from 'lucide-react';
 
 type NativeButtonProps = Omit<

@@ -1,6 +1,6 @@
 import {useCallback, useEffect, useState} from 'react';
 import {DownloadProgress, UpdateInfo, updateService, UpdateState} from '../services/updateService';
-import {logger} from '../utils/logger';
+import {logger} from '../lib/logger.ts';
 
 export interface UseUpdateCheckerResult {
     updateState: UpdateState;

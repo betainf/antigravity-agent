@@ -1,6 +1,6 @@
 import {useEffect} from "react";
 import {listen} from "@tauri-apps/api/event";
-import {logger} from "../utils/logger";
+import {logger} from "../lib/logger.ts";
 import {useAntigravityAccount} from "@/modules/use-antigravity-account.ts";
 import {TrayCommands} from "@/commands/TrayCommands.ts";
 import toast from "react-hot-toast";

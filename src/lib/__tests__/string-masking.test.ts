@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { maskEmail, maskName } from "../string-masking";
+import { maskEmail, maskName } from "../string-masking.ts";
 
 describe("maskEmail", () => {
   it("should return original string when not a basic valid email", () => {

@@ -1,5 +1,5 @@
 import {useEffect} from 'react';
-import {logger} from '../utils/logger';
+import {logger} from '../lib/logger.ts';
 
 /**
  * 开发者工具快捷键 Hook

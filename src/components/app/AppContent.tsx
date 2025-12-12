@@ -6,7 +6,7 @@ import {useTrayMenu} from "@/hooks/use-tray-menu.ts";
 
 import BusinessConfirmDialog from "@/components/business/ConfirmDialog.tsx";
 import toast from 'react-hot-toast';
-import {maskEmail} from "@/utils/string-masking.ts";
+import {maskEmail} from "@/lib/string-masking.ts";
 import {useAppGlobalLoader} from "@/modules/use-app-global-loader.ts";
 import {AccountSessionList, AccountSessionListAccountItem} from "@/components/business/AccountSessionList.tsx";
 

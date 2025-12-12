@@ -6,7 +6,7 @@
 import {create} from 'zustand';
 import {open, save} from '@tauri-apps/plugin-dialog';
 import {readTextFile} from '@tauri-apps/plugin-fs';
-import {logger} from '@/utils/logger.ts';
+import {logger} from '@/lib/logger.ts';
 import toast from 'react-hot-toast';
 import {AccountManageCommands} from "@/commands/AccountManageCommands.ts";
 import {BackupData} from "@/commands/types/account-manage.types.ts";
