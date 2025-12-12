@@ -63,7 +63,7 @@ jobs:
           echo "📦 Fetching release information for $TAG..."
           
           # Get release details with assets
-          RELEASE_DATA=$(gh release view "$TAG" --json body,publishedAt,assets --jq '.')
+          RELEASE_DATA=$(gh release view "$TAG" --repo "$REPO" --json body,publishedAt,assets --jq '.')
           echo "$RELEASE_DATA" > release.json
           
           # Extract release body and published date
@@ -74,8 +74,12 @@ jobs:
             PUB_DATE=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
           fi
           
-          echo "release-body=$BODY" >> $GITHUB_ENV
-          echo "pub-date=$PUB_DATE" >> $GITHUB_ENV
+          {
+            echo "release_body<<EOF"
+            printf '%s\n' "$BODY"
+            echo "EOF"
+            echo "pub_date=$PUB_DATE"
+          } >> "$GITHUB_ENV"
           
           # Show assets count
           ASSET_COUNT=$(echo "$RELEASE_DATA" | jq '.assets | length')
@@ -125,8 +129,8 @@ jobs:
             return 1
           }
           
-          # Windows updater bundle (NSIS zip)
-          detect_file "*setup*.nsis.zip" "windows" "x86_64" "nsis"
+          # Windows updater bundle (NSIS installer)
+          detect_file "*setup*.exe" "windows" "x86_64" "nsis" || detect_file "*.msi" "windows" "x86_64" "msi"
           
           # macOS updater bundle (app tarball)
           detect_file "*aarch64*.app.tar.gz" "darwin" "aarch64" "app"
@@ -191,8 +195,8 @@ jobs:
           # Generate final JSON
           jq -n \
             --arg version "$TAG" \
-            --arg notes "$release-body" \
-            --arg pub_date "$pub-date" \
+            --arg notes "$release_body" \
+            --arg pub_date "$pub_date" \
             --argjson platforms "$PLATFORMS" \
             '{
               version: $version,
