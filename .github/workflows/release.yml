@@ -17,7 +17,7 @@ env:
   CARGO_TERM_COLOR: always
 
 jobs:
-  # Step 1: 先创建 Release（参考 autobuild.yml 的 prepare-release）
+  # Step 1: 先创建 Release
   prepare-release:
     runs-on: ubuntu-latest
     outputs:
@@ -102,215 +102,16 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-  # Step 2: 并行构建和上传（参考 autobuild.yml 的 build job）
+  # Step 2: 并行构建和上传
   build:
     needs: prepare-release
-    strategy:
-      fail-fast: false
-      matrix:
-        include:
-          - platform: macos-latest
-            arch: aarch64
-            runs-on: macos-latest
-            target: aarch64-apple-darwin
-          - platform: macos-latest
-            arch: x86_64
-            runs-on: macos-latest
-            target: x86_64-apple-darwin
-          - platform: ubuntu-latest
-            arch: x86_64
-            runs-on: ubuntu-latest
-            target: x86_64-unknown-linux-gnu
-          - platform: windows-latest
-            arch: x86_64
-            runs-on: windows-latest
-            target: x86_64-pc-windows-msvc
-
-    runs-on: ${{ matrix.runs-on }}
-
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
-      - name: Install dependencies (ubuntu only)
-        if: matrix.platform == 'ubuntu-latest'
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y \
-            libgtk-3-dev \
-            libwebkit2gtk-4.1-dev \
-            libappindicator3-dev \
-            librsvg2-dev \
-            patchelf
-
-      - name: Rust setup
-        uses: dtolnay/rust-toolchain@stable
-        with:
-          targets: ${{ matrix.target }}
-
-      - name: Rust cache
-        uses: swatinem/rust-cache@v2
-        with:
-          workspaces: './src-tauri -> target'
-          cache-on-failure: true
-          cache-targets: true
-          shared-key: tauri-${{ matrix.platform }}-release
-
-      - name: Sync node version and setup cache
-        uses: actions/setup-node@v4
-        with:
-          node-version: 'lts/*'
-          cache: 'npm'
-
-      - name: Install frontend dependencies
-        run: npm ci
-
-      - name: Extract version from tag
-        id: version
-        shell: bash
-        run: |
-          if [[ "${{ github.ref_type }}" == "tag" ]]; then
-            TAG="${{ github.ref_name }}"
-            VERSION="${TAG#v}"
-          elif [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
-            VERSION=$(node -p "require('./package.json').version")
-            TAG="v$VERSION"
-          else
-            echo "❌ This workflow should only be triggered by tags or manual dispatch"
-            exit 1
-          fi
-          echo "tag=$TAG" >> $GITHUB_OUTPUT
-          echo "version=$VERSION" >> $GITHUB_OUTPUT
-
-      - name: Build with Tauri (Release)
-        env:
-          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
-          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
-          RUST_LOG: debug
-        shell: bash
-        run: |
-          echo "Building for target ${{ matrix.target }}..."
-          npm run tauri:build -- --target ${{ matrix.target }} --verbose
-
-      - name: Process and rename artifacts
-        shell: bash
-        run: |
-          BUNDLE_DIR="src-tauri/target/${{ matrix.target }}/release/bundle"
-          VERSION="${{ steps.version.outputs.version }}"
-          PLATFORM="${{ matrix.platform }}"
-          ARCH="${{ matrix.arch }}"
-
-          rename_with_sig() {
-            local file="$1"
-            local new_name="$2"
-            if [ "$file" != "$new_name" ]; then
-              mv "$file" "$new_name" 2>/dev/null || true
-              if [ -f "${file}.sig" ]; then
-                mv "${file}.sig" "${new_name}.sig" 2>/dev/null || true
-              fi
-            fi
-          }
-
-          # macOS 处理
-          if [ "$PLATFORM" = "macos-latest" ]; then
-            if [ -d "$BUNDLE_DIR/dmg" ]; then
-              cd "$BUNDLE_DIR/dmg/"
-              for file in *.dmg; do
-                if [ -f "$file" ]; then
-                  # Normalize to a deterministic name to avoid arch/version duplication
-                  new_name="Antigravity Agent_${VERSION}_${ARCH}.dmg"
-                  rename_with_sig "$file" "$new_name"
-                fi
-              done
-            fi
-
-            if [ -d "$BUNDLE_DIR/macos" ]; then
-              cd "$BUNDLE_DIR/macos/"
-              for file in *.app.tar.gz; do
-                if [ -f "$file" ]; then
-                  # Deterministic name ensures both macOS arches are preserved
-                  new_name="Antigravity Agent_${VERSION}_${ARCH}.app.tar.gz"
-                  rename_with_sig "$file" "$new_name"
-                fi
-              done
-            fi
-          fi
-
-          # Windows 处理
-          if [ "$PLATFORM" = "windows-latest" ]; then
-            if [ -d "$BUNDLE_DIR/msi" ]; then
-              cd "$BUNDLE_DIR/msi/"
-              for file in *.msi *.msi.zip; do
-                if [ -f "$file" ]; then
-                  new_name=$(echo "$file" | sed -E "s/Antigravity Agent_[0-9]+\.[0-9]+\.[0-9]+/Antigravity Agent_$VERSION/")
-                  rename_with_sig "$file" "$new_name"
-                fi
-              done
-            fi
-            if [ -d "$BUNDLE_DIR/nsis" ]; then
-              cd "$BUNDLE_DIR/nsis/"
-              for file in *.exe *.nsis.zip; do
-                if [ -f "$file" ]; then
-                  new_name=$(echo "$file" | sed -E "s/Antigravity Agent_[0-9]+\.[0-9]+\.[0-9]+/Antigravity Agent_$VERSION/")
-                  rename_with_sig "$file" "$new_name"
-                fi
-              done
-            fi
-          fi
-
-          # Linux 处理
-          if [ "$PLATFORM" = "ubuntu-latest" ]; then
-            if [ -d "$BUNDLE_DIR/appimage" ]; then
-              cd "$BUNDLE_DIR/appimage/"
-              for file in *.AppImage *.AppImage.tar.gz; do
-                if [ -f "$file" ]; then
-                  new_name=$(echo "$file" | sed -E "s/Antigravity Agent_[0-9]+\.[0-9]+\.[0-9]+_amd64/antigravity-agent_$VERSION\_amd64/")
-                  rename_with_sig "$file" "$new_name"
-                fi
-              done
-            fi
-            if [ -d "$BUNDLE_DIR/deb" ]; then
-              cd "$BUNDLE_DIR/deb/"
-              for file in *.deb; do
-                if [ -f "$file" ]; then
-                  new_name=$(echo "$file" | sed -E "s/Antigravity Agent_[0-9]+\.[0-9]+\.[0-9]+_amd64/antigravity-agent_$VERSION\_amd64/")
-                  rename_with_sig "$file" "$new_name.deb"
-                fi
-              done
-            fi
-          fi
-
-      - name: Create Windows Portable Version
-        if: matrix.platform == 'windows-latest'
-        shell: pwsh
-        run: |
-          $exePath = "src-tauri\target\${{ matrix.target }}\release\antigravity-agent.exe"
-          $outputDir = "portable-package"
-          $bundleDir = "src-tauri\target\${{ matrix.target }}\release\bundle"
-          $zipPath = "$bundleDir\Antigravity-Agent-${{ matrix.arch }}-Portable.zip"
-
-          if (Test-Path $exePath) {
-            New-Item -ItemType Directory -Force -Path $outputDir | Out-Null
-            Copy-Item $exePath "$outputDir\Antigravity Agent.exe"
-            Compress-Archive -Path "$outputDir\*" -DestinationPath $zipPath -Force
-            Remove-Item -Recurse -Force $outputDir
-          }
-
-      # 完全复制 autobuild.yml 的上传逻辑
-      - name: Upload all artifacts
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        shell: bash
-        run: |
-          BUNDLE_DIR="src-tauri/target/${{ matrix.target }}/release/bundle"
-
-          if [ -d "$BUNDLE_DIR" ]; then
-            # 完全参考 autobuild.yml 的文件过滤
-            find "$BUNDLE_DIR" -type f \( -name "*.msi" -o -name "*.exe" -o -name "*.zip" -o -name "*.AppImage" -o -name "*.deb" -o -name "*.sig" -o -name "*.dmg" -o -name "*.tar.gz" \) | while read file; do
-              echo "Uploading: $file"
-              gh release upload ${{ steps.version.outputs.tag }} "$file" --clobber --repo "${{ github.repository }}"
-            done
-          fi
+    uses: ./.github/workflows/tauri-build.yml
+    with:
+      tag: ${{ needs.prepare-release.outputs.tag }}
+      ref: ${{ github.ref }}
+      version: ${{ needs.prepare-release.outputs.version }}
+      cache_key_suffix: release
+    secrets: inherit
 
   # Step 3: 触发 updater
   trigger-updater:
