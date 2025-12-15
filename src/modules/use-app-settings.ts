@@ -1,0 +1,177 @@
+import {create} from "zustand";
+import {SettingsCommands} from "@/commands/SettingsCommands.ts";
+import {logger} from "@/lib/logger.ts";
+
+type State = {
+  hydrated: boolean;
+  systemTrayEnabled: boolean;
+  silentStartEnabled: boolean;
+  privateMode: boolean;
+  loading: {
+    hydrate: boolean;
+    systemTray: boolean;
+    silentStart: boolean;
+    privateMode: boolean;
+  };
+}
+
+type Actions = {
+  hydrate: () => Promise<void>;
+  refresh: () => Promise<void>;
+  setSystemTrayEnabled: (enabled: boolean) => Promise<void>;
+  setSilentStartEnabled: (enabled: boolean) => Promise<void>;
+  setPrivateMode: (enabled: boolean) => Promise<void>;
+}
+
+export const useAppSettings = create<State & Actions>((setState, getState) => {
+  let hydrationPromise: Promise<void> | null = null;
+
+  const loadAllSettings = async (): Promise<{
+    systemTrayEnabled: boolean;
+    silentStartEnabled: boolean;
+    privateMode: boolean;
+  }> => {
+    const settings = await SettingsCommands.getAll();
+
+    return {
+      systemTrayEnabled: typeof settings?.system_tray_enabled === 'boolean' ? settings.system_tray_enabled : false,
+      silentStartEnabled: typeof settings?.silent_start_enabled === 'boolean' ? settings.silent_start_enabled : false,
+      privateMode: typeof settings?.privateMode === 'boolean' ? settings.privateMode : true,
+    }
+  }
+
+  return {
+    hydrated: false,
+    // 默认保持当前行为：用户卡片信息打码
+    systemTrayEnabled: false,
+    silentStartEnabled: false,
+    privateMode: true,
+    loading: {
+      hydrate: false,
+      systemTray: false,
+      silentStart: false,
+      privateMode: false,
+    },
+    hydrate: async () => {
+      if (getState().hydrated) return;
+
+      if (!hydrationPromise) {
+        setState(state => ({loading: {...state.loading, hydrate: true}}))
+
+        hydrationPromise = loadAllSettings()
+          .then((next) => {
+            setState({
+              ...next,
+              hydrated: true,
+            });
+          })
+          .catch((error) => {
+            logger.error('加载设置失败', {
+              module: 'AppSettings',
+              action: 'hydrate_failed',
+              error: error instanceof Error ? error.message : String(error)
+            })
+
+            setState({hydrated: true});
+          })
+          .finally(() => {
+            setState(state => ({loading: {...state.loading, hydrate: false}}))
+            hydrationPromise = null;
+          });
+      }
+
+      return hydrationPromise;
+    },
+    refresh: async () => {
+      try {
+        const next = await loadAllSettings();
+        setState({
+          ...next,
+          hydrated: true,
+        });
+      } catch (error) {
+        logger.error('刷新设置失败', {
+          module: 'AppSettings',
+          action: 'refresh_failed',
+          error: error instanceof Error ? error.message : String(error)
+        })
+      }
+    },
+    setSystemTrayEnabled: async (enabled: boolean) => {
+      if (getState().loading.systemTray) return;
+      setState(state => ({loading: {...state.loading, systemTray: true}}))
+
+      try {
+        await SettingsCommands.saveSystemTrayState(enabled);
+
+        const next = await loadAllSettings();
+        setState({
+          ...next,
+          hydrated: true,
+        });
+      } catch (error) {
+        logger.error('切换系统托盘失败', {
+          module: 'AppSettings',
+          action: 'set_system_tray_enabled_failed',
+          enabled,
+          error: error instanceof Error ? error.message : String(error)
+        })
+      } finally {
+        setState(state => ({loading: {...state.loading, systemTray: false}}))
+      }
+    },
+    setSilentStartEnabled: async (enabled: boolean) => {
+      if (getState().loading.silentStart) return;
+      setState(state => ({loading: {...state.loading, silentStart: true}}))
+
+      try {
+        // 启用静默启动前确保系统托盘已开启（否则后端会自动修正为 false）
+        if (enabled && !getState().systemTrayEnabled) {
+          setState(state => ({loading: {...state.loading, systemTray: true}}))
+          try {
+            const trayEnabled = await SettingsCommands.saveSystemTrayState(true);
+            setState({systemTrayEnabled: trayEnabled})
+          } finally {
+            setState(state => ({loading: {...state.loading, systemTray: false}}))
+          }
+        }
+
+        await SettingsCommands.saveSilentStartState(enabled);
+
+        const next = await loadAllSettings();
+        setState({
+          ...next,
+          hydrated: true,
+        });
+      } catch (error) {
+        logger.error('切换静默启动失败', {
+          module: 'AppSettings',
+          action: 'set_silent_start_enabled_failed',
+          enabled,
+          error: error instanceof Error ? error.message : String(error)
+        })
+      } finally {
+        setState(state => ({loading: {...state.loading, silentStart: false}}))
+      }
+    },
+    setPrivateMode: async (enabled: boolean) => {
+      if (getState().loading.privateMode) return;
+      setState(state => ({loading: {...state.loading, privateMode: true}}))
+
+      try {
+        const result = await SettingsCommands.savePrivateModeState(enabled);
+        const nextEnabled = typeof result === 'boolean' ? result : enabled;
+        setState({privateMode: nextEnabled, hydrated: true});
+      } catch (error) {
+        logger.error('切换隐私模式失败', {
+          module: 'AppSettings',
+          action: 'set_private_mode_failed',
+          enabled,
+          error: error instanceof Error ? error.message : String(error)
+        })
+      } finally {
+        setState(state => ({loading: {...state.loading, privateMode: false}}))
+      }
+    },
+  }
+})

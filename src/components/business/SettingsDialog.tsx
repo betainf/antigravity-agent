@@ -1,14 +1,12 @@
 import React, {useEffect, useState} from 'react';
-import {FileCode, Monitor, Settings, VolumeX} from 'lucide-react';
+import {EyeOff, FileCode, Monitor, Settings, VolumeX} from 'lucide-react';
 import {open} from '@tauri-apps/plugin-dialog';
 import {getVersion} from '@tauri-apps/api/app';
 import {BaseButton} from '@/components/base-ui/BaseButton';
 import {cn} from '@/lib/utils.ts';
-import {logger} from '@/lib/logger.ts';
 import {PlatformCommands} from "@/commands/PlatformCommands.ts";
 import {Modal} from "antd";
-import {SettingsCommands} from "@/commands/SettingsCommands.ts";
-import {TrayCommands} from "@/commands/TrayCommands.ts";
+import {useAppSettings} from "@/modules/use-app-settings.ts";
 
 interface BusinessSettingsDialogProps {
   isOpen: boolean;
@@ -19,24 +17,24 @@ const BusinessSettingsDialog: React.FC<BusinessSettingsDialogProps> = ({
   isOpen,
   onOpenChange
 }) => {
-  const [dataPath, setDataPath] = useState<string>('');
   const [execPath, setExecPath] = useState<string>('');
   const [appVersion, setAppVersion] = useState<string>('');
 
   
-  // 系统托盘状态
-  const [isSystemTrayEnabled, setIsSystemTrayEnabled] = useState(true);
-  const [isTrayLoading, setIsTrayLoading] = useState(false);
+  // 应用设置（统一管理）
+  const systemTrayEnabled = useAppSettings(state => state.systemTrayEnabled);
+  const silentStartEnabled = useAppSettings(state => state.silentStartEnabled);
+  const privateMode = useAppSettings(state => state.privateMode);
 
-  // 静默启动状态
-  const [isSilentStartEnabled, setIsSilentStartEnabled] = useState(false);
-  const [isSilentStartLoading, setIsSilentStartLoading] = useState(false);
+  const setSystemTrayEnabled = useAppSettings(state => state.setSystemTrayEnabled);
+  const setSilentStartEnabled = useAppSettings(state => state.setSilentStartEnabled);
+  const setPrivateMode = useAppSettings(state => state.setPrivateMode);
+
+  const loading = useAppSettings(state => state.loading);
 
   useEffect(() => {
     if (isOpen) {
       loadCurrentPaths();
-      loadSystemTraySettings();
-      loadSilentStartSettings();
       loadAppVersion();
     }
   }, [isOpen]);
@@ -57,65 +55,9 @@ const BusinessSettingsDialog: React.FC<BusinessSettingsDialogProps> = ({
       }
     }
 
-    setDataPath('自动检测');
     setExecPath(finalExecPath || '未设置');
   };
 
-  
-  const loadSystemTraySettings = async () => {
-    try {
-      const trayEnabled = await TrayCommands.isEnabled();
-      setIsSystemTrayEnabled(trayEnabled);
-    } catch (error) {
-      logger.error('加载系统托盘设置失败', {
-        module: 'SettingsDialog',
-        action: 'load_tray_settings_failed',
-        error: error instanceof Error ? error.message : String(error)
-      });
-      setIsSystemTrayEnabled(false);
-    }
-  };
-
-  const handleSystemTrayToggle = async () => {
-    setIsTrayLoading(true);
-    const result = await TrayCommands.toggle();
-    setIsSystemTrayEnabled(result.enabled);
-    setIsTrayLoading(false);
-    if (!result.enabled && isSilentStartEnabled) {
-      await handleSilentStartToggle();
-    }
-  };
-
-  const loadSilentStartSettings = async () => {
-    try {
-      const silentStartEnabled = await SettingsCommands.isSilentStartEnabled();
-      setIsSilentStartEnabled(silentStartEnabled);
-    } catch (error) {
-      setIsSilentStartEnabled(false);
-    }
-  };
-
-  const handleSilentStartToggle = async () => {
-    if (!isSystemTrayEnabled) {
-      await handleSystemTrayToggle();
-    }
-
-    setIsSilentStartLoading(true);
-    try {
-      const result = await SettingsCommands.saveSilentStartState(!isSilentStartEnabled);
-      setIsSilentStartEnabled(result);
-    } catch (error) {
-      console.log('切换静默启动状态失败', {
-        module: 'SettingsDialog',
-        action: 'toggle_silent_start_failed',
-        error: error instanceof Error ? error.message : String(error)
-      });
-    } finally {
-      setIsSilentStartLoading(false);
-    }
-  };
-
-  
   const handleBrowseExecPath = async () => {
     try {
       const result = await open({
@@ -189,18 +131,27 @@ const BusinessSettingsDialog: React.FC<BusinessSettingsDialogProps> = ({
             icon={<Monitor className="h-4 w-4 text-blue-500"/>}
             title="系统托盘"
             description="关闭窗口时最小化到托盘"
-            checked={isSystemTrayEnabled}
-            onChange={handleSystemTrayToggle}
-            isLoading={isTrayLoading}
+            checked={systemTrayEnabled}
+            onChange={setSystemTrayEnabled}
+            isLoading={loading.systemTray}
           />
 
           <SettingToggle
             icon={<VolumeX className="h-4 w-4 text-purple-500"/>}
             title="静默启动"
             description="启动时自动隐藏主窗口"
-            checked={isSilentStartEnabled}
-            onChange={handleSilentStartToggle}
-            isLoading={isSilentStartLoading}
+            checked={silentStartEnabled}
+            onChange={setSilentStartEnabled}
+            isLoading={loading.silentStart}
+          />
+
+          <SettingToggle
+            icon={<EyeOff className="h-4 w-4 text-emerald-500"/>}
+            title="隐私模式"
+            description="在用户卡片中隐藏邮箱和昵称"
+            checked={privateMode}
+            onChange={setPrivateMode}
+            isLoading={loading.privateMode}
           />
         </div>
 

@@ -5,12 +5,29 @@ use std::sync::Mutex;
 use tauri::AppHandle;
 
 /// 应用程序设置
-#[derive(Debug, Clone, Serialize, Deserialize, Default)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(default)]
 pub struct AppSettings {
     /// 是否启用系统托盘
     pub system_tray_enabled: bool,
     /// 是否启用静默启动（启动时最小化到托盘或后台）
     pub silent_start_enabled: bool,
+    /// 隐私模式：用户信息打码（邮箱/用户名）
+    pub private_mode: bool,
+}
+
+fn default_private_mode() -> bool {
+    true
+}
+
+impl Default for AppSettings {
+    fn default() -> Self {
+        Self {
+            system_tray_enabled: false,
+            silent_start_enabled: false,
+            private_mode: default_private_mode(),
+        }
+    }
 }
 
 impl AppSettings {

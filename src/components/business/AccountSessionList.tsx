@@ -4,6 +4,7 @@ import {motion, AnimatePresence, Variants} from 'motion/react';
 import { AnimatedGridPattern } from "@/components/ui/animated-grid-pattern.tsx";
 import { maskEmail, maskName } from "@/lib/string-masking.ts";
 import {UserTier} from "@/modules/use-account-addition-data.ts";
+import {useAppSettings} from "@/modules/use-app-settings.ts";
 
 export interface AccountSessionListAccountItem {
   geminiQuota: number;
@@ -66,6 +67,7 @@ export function AccountSessionList({
                                      onSwitch,
                                      onDelete,
                                    }: AccountSessionListProps) {
+  const privateMode = useAppSettings(state => state.privateMode);
 
   return (
     <motion.div
@@ -92,8 +94,8 @@ export function AccountSessionList({
               userAvatar={account.userAvatar}
               tier={account.tier}
               isCurrentUser={currentUserEmail === account.email}
-              email={maskEmail(account.email)}
-              nickName={maskName(account.nickName)}
+              email={privateMode ? maskEmail(account.email) : account.email}
+              nickName={privateMode ? maskName(account.nickName) : account.nickName}
               onSelect={() => onSelect(account)}
               onSwitch={() => onSwitch(account)}
               onDelete={() => onDelete(account)}

@@ -8,6 +8,7 @@ import AppDock from './components/app/AppDock.tsx';
 import {AppContent} from "@/components/app/AppContent.tsx";
 import {AppLoader} from "@/components/app/AppLoader.tsx";
 import {PlatformCommands} from "@/commands/PlatformCommands.ts";
+import {useAppSettings} from "@/modules/use-app-settings.ts";
 
 function App() {
   // ========== 应用状态 ==========
@@ -15,6 +16,7 @@ function App() {
 
   // ========== Hook 集成 ==========
   useDevToolsShortcut();
+  const hydrateAppSettings = useAppSettings(state => state.hydrate);
 
   // 用户管理
   const antigravityAccount = useAntigravityAccount();
@@ -62,11 +64,15 @@ function App() {
     initializeApp();
   }, []);
 
+  useEffect(() => {
+    hydrateAppSettings();
+  }, []);
+
   // ========== 渲染逻辑 ==========
   if (isDetecting) {
     return (
       <div
-        className="flex items-center justify-center min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 dark:from-slate-900 dark:to-slate-800">
+        className="flex items-center justify-center min-h-screen from-slate-50 to-slate-100 dark:from-slate-900 dark:to-slate-800">
         <div className="text-center">
           <div className="animate-spin rounded-full h-16 w-16 mx-auto mb-6 text-blue-500"></div>
           <h2 className="text-2xl font-semibold mb-2 text-gray-800 dark:text-gray-100">
@@ -92,4 +98,3 @@ function App() {
 }
 
 export default App;
-

@@ -7,11 +7,12 @@ import type { AppSettings } from './types/settings.types';
 export class SettingsCommands {
 
   /**
-   * 获取静默启动状态
-   * @returns 是否已启用静默启动
+   * 保存系统托盘状态
+   * @param enabled 是否启用
+   * @returns 保存后的状态
    */
-  static async isSilentStartEnabled(): Promise<boolean> {
-    return invoke('is_silent_start_enabled');
+  static async saveSystemTrayState(enabled: boolean): Promise<boolean> {
+    return invoke('save_system_tray_state', { enabled });
   }
 
   /**
@@ -21,6 +22,15 @@ export class SettingsCommands {
    */
   static async saveSilentStartState(enabled: boolean): Promise<boolean> {
     return invoke('save_silent_start_state', { enabled });
+  }
+
+  /**
+   * 保存隐私模式状态
+   * @param enabled 是否启用
+   * @returns 保存后的状态
+   */
+  static async savePrivateModeState(enabled: boolean): Promise<boolean> {
+    return invoke('save_private_mode_state', { enabled });
   }
 
   /**

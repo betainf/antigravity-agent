@@ -1,6 +1,7 @@
-﻿import type { Meta, StoryObj } from '@storybook/react';
+import type { Meta, StoryObj } from '@storybook/react';
 import { fn } from 'storybook/test';
-import {AccountSessionList, AccountSessionListAccountItem} from "@/components/business/AccountSessionList.tsx";
+import { AccountSessionList, AccountSessionListAccountItem } from '@/components/business/AccountSessionList.tsx';
+import { useAppSettings } from '@/modules/use-app-settings.ts';
 
 const meta = {
   title: 'Business/AccountSessionList',
@@ -55,7 +56,7 @@ const mockAccounts: AccountSessionListAccountItem[] = [
     email: 'jason.bourne@cia.gov',
     userAvatar: 'https://api.dicebear.com/9.x/avataaars/svg?seed=Jason',
     geminiQuota: 0.15, // 低配额
-    claudeQuota: 0.40,
+    claudeQuota: 0.4,
     tier: 'free-tier',
     apiKey: 'sk_mock_jason',
   },
@@ -63,7 +64,7 @@ const mockAccounts: AccountSessionListAccountItem[] = [
     nickName: 'Unknown Guest',
     email: 'guest.temp@provider.net',
     userAvatar: 'https://api.dicebear.com/9.x/avataaars/svg?seed=Guest',
-    geminiQuota: -1,   // 未知配额
+    geminiQuota: -1, // 未知配额
     claudeQuota: 0.05, // 极低配额
     tier: 'g1-ultra-tier',
     apiKey: 'sk_mock_guest',
@@ -81,6 +82,19 @@ const gridAccounts: AccountSessionListAccountItem[] = Array.from({ length: 9 }).
   };
 });
 
+const longEmailAccounts: AccountSessionListAccountItem[] = [
+  {
+    nickName: 'ThisIsAnExcessivelyLongNickName_ToTest_TextOverflow_AndLayoutStability_InUserCardHeader',
+    email: 'this.is.a.super.long.email.address.with.many.sections.and.tags+storybook-overflow-test@subdomain1.subdomain2.subdomain3.subdomain4.some-very-long-company-domain.example.corp.company.com',
+    userAvatar: 'https://api.dicebear.com/9.x/avataaars/svg?seed=LongEmail',
+    geminiQuota: 0.66,
+    claudeQuota: 0.77,
+    tier: 'g1-pro-tier',
+    apiKey: 'sk_mock_long_email',
+  },
+  ...mockAccounts,
+];
+
 // --- Stories ---
 
 /**
@@ -88,6 +102,10 @@ const gridAccounts: AccountSessionListAccountItem[] = Array.from({ length: 9 }).
  * 注意：邮箱和昵称应该会被组件内的 mask 工具自动脱敏。
  */
 export const Default: Story = {
+  render: (args) => {
+    useAppSettings.setState({ privateMode: true });
+    return <AccountSessionList {...args} />;
+  },
   args: {
     accounts: mockAccounts,
   },
@@ -98,6 +116,10 @@ export const Default: Story = {
  * currentUserEmail 命中某个账号时，该卡片应显示“当前”徽标并禁用操作。
  */
 export const WithCurrentUser: Story = {
+  render: (args) => {
+    useAppSettings.setState({ privateMode: true });
+    return <AccountSessionList {...args} />;
+  },
   args: {
     accounts: mockAccounts,
     currentUserEmail: mockAccounts[0].email,
@@ -109,6 +131,10 @@ export const WithCurrentUser: Story = {
  * 当 accounts 为空数组时，应该显示 SVG 图标和提示文案。
  */
 export const EmptyState: Story = {
+  render: (args) => {
+    useAppSettings.setState({ privateMode: true });
+    return <AccountSessionList {...args} />;
+  },
   args: {
     accounts: [],
   },
@@ -119,8 +145,27 @@ export const EmptyState: Story = {
  * 用于测试 flex-wrap 是否正常工作，以及卡片间距是否合适。
  */
 export const GridWrapLayout: Story = {
+  render: (args) => {
+    useAppSettings.setState({ privateMode: true });
+    return <AccountSessionList {...args} />;
+  },
   args: {
     accounts: gridAccounts,
     currentUserEmail: gridAccounts[0].email,
+  },
+};
+
+/**
+ * 过长邮箱/昵称：
+ * 用于复现 header 文本溢出问题（privateMode=false 显示全量文本）。
+ */
+export const LongEmailOverflow: Story = {
+  render: (args) => {
+    useAppSettings.setState({ privateMode: false });
+    return <AccountSessionList {...args} />;
+  },
+  args: {
+    accounts: longEmailAccounts,
+    currentUserEmail: longEmailAccounts[0].email,
   },
 };

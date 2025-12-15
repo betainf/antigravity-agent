@@ -5,6 +5,7 @@ import {
   useMotionValue,
   useSpring
 } from 'framer-motion';
+import { Tooltip } from 'antd';
 import { cn } from "@/lib/utils.ts";
 import { Avatar } from "@/components/ui/avatar.tsx";
 import { ArrowLeftRight, Crown, Gem, Trash2 } from 'lucide-react';
@@ -66,6 +67,10 @@ const tierBadgeMap: Record<UserTier, React.ReactNode> = {
   "g1-ultra-tier": <span className="px-1.5 py-0.5 bg-violet-50 text-violet-600 text-[10px] font-bold rounded-md leading-none border border-violet-200/60 flex items-center gap-0.5 shadow-sm"><Gem size={10} className="fill-current" />Ultra</span>,
 };
 
+const tooltipInnerStyle: React.CSSProperties = {
+  maxWidth: 520,
+  wordBreak: 'break-all',
+};
 
 // 容器变体：控制整体入场 + 协调子元素入场
 const containerVariants: Variants = {
@@ -185,14 +190,20 @@ export function AccountSessionListCard(props: UserSessionCardProps) {
             alt={props.nickName}
           />
 
-          <div className="flex-1">
-            <div className="flex items-center gap-2 mb-1">
-              <h2 className="text-lg font-bold text-slate-900 leading-tight">{props.nickName}</h2>
-              <div className="mt-0.5">
+          <div className="flex-1 min-w-0">
+            <div className="flex items-center gap-2 mb-1 min-w-0">
+              <Tooltip title={props.nickName} styles={{ container: tooltipInnerStyle }}>
+                <h2 className="flex-1 min-w-0 text-lg font-bold text-slate-900 leading-tight line-clamp-2 break-words">
+                  {props.nickName}
+                </h2>
+              </Tooltip>
+              <div className="mt-0.5 shrink-0">
                 {tierBadgeMap[tier]}
               </div>
             </div>
-            <p className="text-sm text-slate-500 font-medium">{props.email}</p>
+            <Tooltip title={props.email} styles={{ container: tooltipInnerStyle }}>
+              <p className="text-sm text-slate-500 font-medium line-clamp-2 break-all">{props.email}</p>
+            </Tooltip>
           </div>
 
           {props.isCurrentUser && (

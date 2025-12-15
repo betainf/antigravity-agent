@@ -55,20 +55,6 @@ impl SystemTrayManager {
         Ok(())
     }
 
-    /// 切换系统托盘状态
-    pub fn toggle(&self, app_handle: &AppHandle) -> Result<bool, String> {
-        let settings_manager = app_handle.state::<AppSettingsManager>();
-        let is_enabled = settings_manager.get_settings().system_tray_enabled;
-
-        if is_enabled {
-            self.disable(app_handle)?;
-            Ok(false)
-        } else {
-            self.enable(app_handle)?;
-            Ok(true)
-        }
-    }
-
     /// 检查系统托盘是否应启用（基于设置）
     pub fn is_enabled_setting(&self, app_handle: &AppHandle) -> bool {
         app_handle
