@@ -1,5 +1,5 @@
 import type { Meta, StoryObj } from '@storybook/react';
-import { LiquidProgressBar } from "@/components/ui/LiquidProgressBar";
+import { LiquidProgressBar } from "@/components/ui/liquid-progress-bar.tsx";
 
 const meta = {
     title: 'UI/LiquidProgressBar',
@@ -34,37 +34,36 @@ const getFutureDate = (addHours: number) => {
     return d.toISOString();
 };
 
-// --- Gemini Pro ---
+// --- Gemini Pro (Safe / High) ---
 export const GeminiPro: Story = {
     args: {
         type: 'gemini-pro',
         percentage: 0.96,
-        resetIn: getFutureDate(2), // 2 hours from now
+        resetIn: getFutureDate(2),
         className: 'w-[350px]',
     },
 };
 
-// --- Gemini Flash ---
-export const GeminiFlash: Story = {
+// --- Gemini Flash (Warning / Medium) ---
+export const GeminiFlashWarning: Story = {
     args: {
         type: 'gemini-flash',
-        percentage: 0.45,
-        resetIn: getFutureDate(26), // 1 day 2 hours from now
+        percentage: 0.35, // Below 0.45 threshold -> Warning Color
+        resetIn: getFutureDate(26),
         className: 'w-[350px]',
     },
 };
 
-// --- Claude ---
-export const Claude: Story = {
+// --- Claude (Critical / Low) ---
+export const ClaudeCritical: Story = {
     args: {
         type: 'claude',
-        percentage: 0.12,
-        resetIn: getFutureDate(0.5), // 30 mins from now
+        percentage: 0.12, // Below 0.2 threshold -> Critical Color + Pulse
+        resetIn: getFutureDate(0.5),
         className: 'w-[350px]',
     },
 };
 
-// --- Gemini Image ---
 export const GeminiImage: Story = {
     args: {
         type: 'gemini-image',
@@ -74,17 +73,15 @@ export const GeminiImage: Story = {
     },
 };
 
-// --- Full Usage (Hidden Timer) ---
 export const FullUsageNoTimer: Story = {
     args: {
         type: 'gemini-pro',
         percentage: 1,
-        resetIn: getFutureDate(2), // Should be hidden because percentage is 1
+        resetIn: getFutureDate(2),
         className: 'w-[350px]',
     },
 };
 
-// --- Unknown ---
 export const UnknownState: Story = {
     args: {
         type: 'gemini-pro',
