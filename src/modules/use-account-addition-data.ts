@@ -60,7 +60,7 @@ export const useAccountAdditionData = create<State & Actions>((setState, getStat
 
     // 先模糊匹配下 tier 的定义, 因为我也知不道具体是啥
     if (antigravityAccount.context.plan.slug.includes("ultra")) {
-      antigravityAccount.context.plan.slug = "g1-ultra-tier";
+      // antigravityAccount.context.plan.slug = "g1-ultra-tier";
     }
 
     codeAssistResponse = await CloudCodeAPI.loadCodeAssist(antigravityAccount.auth.access_token);

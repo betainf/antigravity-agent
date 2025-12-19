@@ -1,12 +1,12 @@
 import React from 'react';
-import {motion, useMotionTemplate, useMotionValue, useSpring} from 'framer-motion';
-import {Tooltip} from 'antd';
-import {cn} from "@/lib/utils.ts";
-import {Avatar} from "@/components/ui/avatar.tsx";
-import {ArrowLeftRight, Crown, Gem, Trash2} from 'lucide-react';
-import {BaseButton} from "@/components/base-ui/BaseButton.tsx";
-import {Variants} from "motion/react";
-import {LiquidProgressBar} from "@/components/ui/liquid-progress-bar.tsx";
+import { motion, useMotionTemplate, useMotionValue, useSpring } from 'framer-motion';
+import { Tooltip } from 'antd';
+import { cn } from "@/lib/utils.ts";
+import { Avatar } from "@/components/ui/avatar.tsx";
+import { ArrowLeftRight, Crown, Gem, Trash2, TriangleAlert } from 'lucide-react';
+import { BaseButton } from "@/components/base-ui/BaseButton.tsx";
+import { Variants } from "motion/react";
+import { LiquidProgressBar } from "@/components/ui/liquid-progress-bar.tsx";
 
 // ==========================================
 // 类型定义
@@ -102,7 +102,11 @@ const childVariants: Variants = {
 };
 
 export function AccountSessionListCard(props: UserSessionCardProps) {
-  const { tier } = props;
+  let { tier } = props;
+  const unknownTier = !["free-tier", "g1-pro-tier", "g1-ultra-tier"].includes(tier);
+  if (unknownTier) {
+    tier = "free-tier";
+  }
   const { boxShadow, hoverBoxShadow, ...otherStyles } = tierVisualStyles[tier];
 
   // --- 1. 聚光灯 (Spotlight) 逻辑 ---
@@ -296,6 +300,22 @@ export function AccountSessionListCard(props: UserSessionCardProps) {
           </BaseButton>
         </motion.div>
       </div>
+      {(unknownTier) && (
+        <div className="absolute bottom-3 right-3 z-50">
+          <Tooltip title={
+            <div className="flex flex-col gap-0.5">
+              <span>
+                当您看到这个符号说明开发者内置的数据未能覆盖当前账户层级 <span className="font-mono bg-white/10 px-1 rounded">{props.tier}</span>
+              </span>
+              <span>
+                这不是您的问题, 为了解决这个问题, 您可以将该提示截图 <a href="https://github.com/MonchiLin/antigravity-agent/issues" target="_blank" rel="noreferrer" className="text-blue-300 hover:text-blue-200 underline decoration-auto underline-offset-2">提供给开发者</a>
+              </span>
+            </div>
+          }>
+            <TriangleAlert className="w-4 h-4 text-amber-500/80 hover:text-amber-600 transition-colors cursor-help" />
+          </Tooltip>
+        </div>
+      )}
     </motion.div>
   );
 }
