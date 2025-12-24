@@ -112,3 +112,14 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           gh release upload plugin-debug vscode-extension/antigravity-vscode-0.0.1.vsix --clobber --repo "${{ github.repository }}"
+
+      - name: Publish to Open VSX
+        working-directory: ./vscode-extension
+        env:
+          OVSX_PAT: ${{ secrets.OVSX_PAT }}
+        run: |
+          if [ -n "$OVSX_PAT" ]; then
+            npx ovsx publish ./antigravity-vscode-0.0.1.vsix --pat "$OVSX_PAT"
+          else
+            echo "⚠️ OVSX_PAT secret not found, skipping Open VSX publish"
+          fi
