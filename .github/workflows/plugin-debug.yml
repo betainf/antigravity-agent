@@ -99,6 +99,9 @@ jobs:
           cache: 'npm'
           cache-dependency-path: vscode-extension/package-lock.json
 
+      - name: Install Root Dependencies
+        run: npm ci --ignore-scripts --no-audit --prefer-offline
+
       - name: Get Version
         id: version
         working-directory: ./vscode-extension
