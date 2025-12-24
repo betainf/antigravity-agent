@@ -38,7 +38,7 @@ export const QuotaItem: React.FC<QuotaItemProps> = ({ label, percentage, resetTe
                 <span className="opacity-80">{label}</span>
                 {showReset && (
                     <span className="text-xs opacity-70 ml-1">
-                        (Reset: {formatTime(resetText)})
+                        (重置于: {formatTime(resetText)})
                     </span>
                 )}
             </div>

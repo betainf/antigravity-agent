@@ -10,16 +10,20 @@ export class Logger {
 
     public static log(message: string, ...args: any[]) {
         const timestamp = new Date().toLocaleTimeString();
-        let formattedMessage = `[${timestamp}] ${message}`;
+        const prefix = `[${timestamp}] ${message}`;
 
+        // 1. Format for Output Channel (Strings only)
+        let stringifiedArgs = '';
         if (args.length > 0) {
-            formattedMessage += ' ' + args.map(arg =>
+            stringifiedArgs = ' ' + args.map(arg =>
                 typeof arg === 'object' ? JSON.stringify(arg, null, 2) : arg
             ).join(' ');
         }
+        this._outputChannel.appendLine(prefix + stringifiedArgs);
 
-        this._outputChannel.appendLine(formattedMessage);
-        console.log(formattedMessage); // Also log to Debug Console
+        // 2. Format for Debug Console (Keep objects alive for "Intelligent" inspection)
+        // We pass the prefix and the raw args so the browser/debugger console can format them interactively
+        console.log(prefix, ...args);
     }
 
     public static show() {

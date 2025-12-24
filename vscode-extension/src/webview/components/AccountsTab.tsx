@@ -79,16 +79,18 @@ export const AccountsTab: React.FC = () => {
     }
 
     return (
-        <div className="accounts-grid">
-            {accounts.map((acc) => (
-                <AccountCard
-                    key={acc.context.email}
-                    account={acc}
-                    data={additionData.data[acc.context.email]}
-                    isCurrent={currentEmail === acc.context.email}
-                    onSwitch={switchAccount}
-                />
-            ))}
+        <div className="accounts-container">
+            <div className="accounts-grid">
+                {accounts.map((acc) => (
+                    <AccountCard
+                        key={acc.context.email}
+                        account={acc}
+                        data={additionData.data[acc.context.email]}
+                        isCurrent={currentEmail === acc.context.email}
+                        onSwitch={switchAccount}
+                    />
+                ))}
+            </div>
         </div>
     );
 };

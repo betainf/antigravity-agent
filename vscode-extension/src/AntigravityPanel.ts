@@ -49,6 +49,20 @@ export class AntigravityPanel {
         // Listen for when the panel is disposed
         // This happens when the user closes the panel or when the panel is closed programmatically
         this._panel.onDidDispose(() => this.dispose(), null, this._disposables);
+
+        // Handle messages from the webview
+        this._panel.webview.onDidReceiveMessage(
+            message => {
+                switch (message.command) {
+                    case 'setAutoAccept':
+                        const { AutoAcceptManager } = require('./auto-accept-manager');
+                        AutoAcceptManager.toggle(message.enabled);
+                        return;
+                }
+            },
+            null,
+            this._disposables
+        );
     }
 
     public dispose() {
@@ -80,7 +94,7 @@ export class AntigravityPanel {
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src ${webview.cspSource} 'unsafe-inline'; script-src ${webview.cspSource} 'unsafe-inline'; connect-src http://127.0.0.1:*; img-src ${webview.cspSource} data: https:;">
+    <meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src ${webview.cspSource} 'unsafe-inline'; script-src ${webview.cspSource} 'unsafe-inline'; connect-src http://127.0.0.1:*; img-src ${webview.cspSource} data: https:; font-src ${webview.cspSource} https: data:;">
     <link rel="stylesheet" href="${styleUri}">
     <title>Antigravity</title>
 </head>

@@ -53,16 +53,16 @@ export const AccountCard: React.FC<AccountCardProps> = ({ account, data, isCurre
                 <div className="flex gap-2 items-center">
                     {isCurrent && (
                         <VSCodeTag className="bg-vscode-info text-white">
-                            Current
+                            当前
                         </VSCodeTag>
                     )}
-                    <VSCodeTag>{account.context.plan?.slug || 'UNKNOWN'}</VSCodeTag>
+                    <VSCodeTag>{account.context.plan?.slug || '未知'}</VSCodeTag>
                     {!isCurrent && (
                         <VSCodeButton
                             appearance="secondary"
                             onClick={() => onSwitch(account.context.email)}
                         >
-                            Switch
+                            切换
                         </VSCodeButton>
                     )}
                 </div>
@@ -71,7 +71,7 @@ export const AccountCard: React.FC<AccountCardProps> = ({ account, data, isCurre
             {/* Quotas Section */}
             <div className="quota-section flex flex-col gap-2">
                 {!data ? (
-                    <div className="text-xs opacity-60">Loading quotas...</div>
+                    <div className="text-xs opacity-60">正在加载配额...</div>
                 ) : (
                     <>
                         <QuotaItem label="Gemini Pro" percentage={data.geminiProQuote} resetText={data.geminiProQuoteRestIn} />

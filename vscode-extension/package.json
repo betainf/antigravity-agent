@@ -5,8 +5,13 @@
     "version": "0.0.1",
     "icon": "images/icon.png",
     "type": "module",
+    "publisher": "antigravity",
+    "repository": {
+        "type": "git",
+        "url": "https://github.com/placeholder/repo"
+    },
     "engines": {
-        "vscode": "^1.90.0"
+        "vscode": "^1.104.0"
     },
     "categories": [
         "Other"
@@ -41,7 +46,7 @@
         "@types/node": "^25.0.3",
         "@types/react": "^18.3.27",
         "@types/react-dom": "^18.3.7",
-        "@types/vscode": "^1.107.0",
+        "@types/vscode": "^1.104.0",
         "@typescript-eslint/eslint-plugin": "^5.62.0",
         "@typescript-eslint/parser": "^5.62.0",
         "@vitejs/plugin-react": "^5.1.2",
