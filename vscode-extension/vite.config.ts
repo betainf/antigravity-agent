@@ -25,6 +25,7 @@ export default defineConfig({
             // 强制所有模块使用同一个 React 实例（避免父项目 React 19 和当前 React 18 冲突）
             'react': path.resolve(__dirname, 'node_modules/react'),
             'react-dom': path.resolve(__dirname, 'node_modules/react-dom'),
+            'zustand': path.resolve(__dirname, 'node_modules/zustand'),
             // 项目路径别名
             '@': path.resolve(__dirname, '../src'),
             '@tauri-apps/api/core': path.resolve(__dirname, 'src/shim/tauri-api.ts'),
