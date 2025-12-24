@@ -1,0 +1,114 @@
+name: Plugin Debug Build
+
+on:
+  push:
+    branches: [plugin]      # plugin 分支 push 时触发
+  workflow_dispatch:        # 手动触发
+
+permissions:
+  contents: write  # 允许创建/更新 release、上传文件
+
+concurrency:
+  group: plugin-debug-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  # 第一步：删除旧 release，创建新的 release
+  prepare-release:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout plugin branch
+        uses: actions/checkout@v4
+        with:
+          ref: plugin
+
+      - name: Delete old plugin-debug release (if exists)
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          # 尝试删除旧的 release
+          gh release delete plugin-debug --yes --repo "${{ github.repository }}" 2>/dev/null || echo "No existing release to delete"
+          # 尝试删除旧的 tag
+          gh api -X DELETE "repos/${{ github.repository }}/git/refs/tags/plugin-debug" 2>/dev/null || echo "No existing tag to delete"
+          echo "✅ Cleaned up old release and tag"
+
+      - name: Create new plugin-debug release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: plugin-debug
+          name: 'Antigravity Agent Plugin Debug (${{ github.event.head_commit.timestamp }})'
+          body: |
+            Debug build from plugin branch.
+            
+            **包含 VS Code 插件构建**
+
+            🕐 Last updated: ${{ github.event.head_commit.timestamp }}
+            📦 Commit: ${{ github.sha }}
+
+            ---
+            ## 📥 下载地址
+
+            ⚠️ **注意**：这是开发调试版本，极其不稳定。
+
+            ### VS Code 插件
+            - [VSIX安装包](${{ github.server_url }}/${{ github.repository }}/releases/download/plugin-debug/antigravity-vscode-0.0.1.vsix)
+
+            ### Windows
+            **安装版(推荐)**
+            - [64位(x64)](${{ github.server_url }}/${{ github.repository }}/releases/download/plugin-debug/Antigravity.Agent_x64-setup.exe)
+
+            ### macOS
+            - [Apple M芯片](${{ github.server_url }}/${{ github.repository }}/releases/download/plugin-debug/Antigravity.Agent_aarch64.dmg) | [Intel芯片](${{ github.server_url }}/${{ github.repository }}/releases/download/plugin-debug/Antigravity.Agent_x86_64.dmg)
+
+            ### Linux
+            **AppImage(通用 推荐)**
+            - [64位](${{ github.server_url }}/${{ github.repository }}/releases/download/plugin-debug/antigravity-agent_amd64.AppImage)
+            ---
+          prerelease: true
+          draft: false
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  # 第二步：并行构建主应用
+  build-app:
+    needs: prepare-release
+    uses: ./.github/workflows/tauri-build.yml
+    with:
+      tag: plugin-debug
+      ref: plugin
+      cache_key_suffix: plugin-debug
+    secrets: inherit
+
+  # 第三步：构建 VS Code 插件
+  build-extension:
+    needs: prepare-release
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          ref: plugin
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 'lts/*'
+          cache: 'npm'
+          cache-dependency-path: vscode-extension/package-lock.json
+
+      - name: Install dependencies
+        working-directory: ./vscode-extension
+        run: npm ci
+
+      - name: Build and Package Extension
+        working-directory: ./vscode-extension
+        run: npx @vscode/vsce package --out ./antigravity-vscode-0.0.1.vsix
+
+      - name: Upload Extension to Release
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh release upload plugin-debug vscode-extension/antigravity-vscode-0.0.1.vsix --clobber --repo "${{ github.repository }}"
