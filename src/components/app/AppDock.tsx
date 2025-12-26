@@ -1,22 +1,24 @@
-import React, {useCallback, useState} from 'react';
-import {ArrowBigDownDash, ArrowBigUpDash, Settings, UserRoundPlus} from 'lucide-react';
-import {useAntigravityAccount} from '@/modules/use-antigravity-account.ts';
+import React, { useCallback, useState } from 'react';
+import { ArrowBigDownDash, ArrowBigUpDash, Settings, UserRoundPlus, Rocket } from 'lucide-react';
+import { useAntigravityAccount } from '@/modules/use-antigravity-account.ts';
 import toast from 'react-hot-toast';
-import {useImportExportAccount} from "@/modules/use-import-export-accounts.ts";
-import {ImportPasswordDialog} from "@/components/ImportPasswordDialog.tsx";
+import { useImportExportAccount } from "@/modules/use-import-export-accounts.ts";
+import { ImportPasswordDialog } from "@/components/ImportPasswordDialog.tsx";
 import ExportPasswordDialog from "@/components/ExportPasswordDialog.tsx";
 import BusinessSettingsDialog from "@/components/business/SettingsDialog.tsx";
-import {Modal} from 'antd';
-import {useSignInNewAntigravityAccount} from "@/hooks/use-sign-in-new-antigravity-account.ts";
-import {Dock, DockIcon} from "@/components/ui/dock";
-import {AnimatedTooltip} from "@/components/ui/animated-tooltip.tsx";
+import { Modal } from 'antd';
+import { useSignInNewAntigravityAccount } from "@/hooks/use-sign-in-new-antigravity-account.ts";
+import { Dock, DockIcon } from "@/components/ui/dock";
+import { AnimatedTooltip } from "@/components/ui/animated-tooltip.tsx";
+import { useInstallExtension } from "@/hooks/use-install-extension.tsx";
 
-const {confirm} = Modal;
+const { confirm } = Modal;
 
 const AppDock = () => {
 
   // ========== 应用状态 ==========
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+  const { install, isInstalling } = useInstallExtension();
 
   const antigravityAccount = useAntigravityAccount();
   const importExportAccount = useImportExportAccount();
@@ -50,7 +52,7 @@ const AppDock = () => {
 
   // 计算全局加载状态
   const isAnyLoading = signInNewAntigravityAccount.processing || isImporting || isExporting;
-  
+
   // 处理登录新账户按钮点击
   const handleBackupAndRestartClick = () => {
     confirm({
@@ -76,15 +78,20 @@ const AppDock = () => {
 
   const handleSubmitImportPassword = (password: string) => {
     importExportAccount.submitImportPassword(password)
-    .then(() => {
-      antigravityAccount.getAccounts()
-    })
+      .then(() => {
+        antigravityAccount.getAccounts()
+      })
   };
 
   return (
     <>
       <div className="fixed bottom-4 left-1/2 transform -translate-x-1/2 z-40">
         <Dock>
+          <DockIcon onClick={install}>
+            <AnimatedTooltip text={isInstalling ? "正在安装..." : "安装 Antigravity Agent 扩展"}>
+              <Rocket className={`size-6 ${isInstalling ? 'animate-pulse text-blue-500' : ''}`} />
+            </AnimatedTooltip>
+          </DockIcon>
           <DockIcon onClick={handleBackupAndRestartClick}>
             <AnimatedTooltip text={"登录新账户"}>
               <UserRoundPlus className="size-6" />
