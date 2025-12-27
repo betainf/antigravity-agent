@@ -1,15 +1,15 @@
-import React, {useEffect, useState} from 'react';
-import {Bug, EyeOff, FileCode, FolderOpen, Monitor, Settings, VolumeX} from 'lucide-react';
-import {open} from '@tauri-apps/plugin-dialog';
-import {getVersion} from '@tauri-apps/api/app';
-import {BaseButton} from '@/components/base-ui/BaseButton';
-import {cn} from '@/lib/utils.ts';
-import {PlatformCommands} from "@/commands/PlatformCommands.ts";
-import {Modal} from "antd";
-import {useAppSettings} from "@/modules/use-app-settings.ts";
-import {LoggingCommands} from "@/commands/LoggingCommands.ts";
-import {useTranslation} from 'react-i18next';
-import {LanguageSwitcher} from '@/components/LanguageSwitcher';
+import React, { useEffect, useState } from 'react';
+import { Bug, EyeOff, FileCode, FolderOpen, Monitor, Settings, VolumeX } from 'lucide-react';
+import { open } from '@tauri-apps/plugin-dialog';
+import { getVersion } from '@tauri-apps/api/app';
+import { BaseButton } from '@/components/base-ui/BaseButton';
+import { cn } from '@/lib/utils.ts';
+import { PlatformCommands } from "@/commands/PlatformCommands.ts";
+import { Modal } from "antd";
+import { useAppSettings } from "@/modules/use-app-settings.ts";
+import { LoggingCommands } from "@/commands/LoggingCommands.ts";
+import { useTranslation } from 'react-i18next';
+
 
 interface BusinessSettingsDialogProps {
   isOpen: boolean;
@@ -20,12 +20,12 @@ const BusinessSettingsDialog: React.FC<BusinessSettingsDialogProps> = ({
   isOpen,
   onOpenChange
 }) => {
-  const {t} = useTranslation('settings');
+  const { t } = useTranslation('settings');
   const [execPath, setExecPath] = useState<string>('');
   const [logDirPath, setLogDirPath] = useState<string>('');
   const [appVersion, setAppVersion] = useState<string>('');
 
-  
+
   // 应用设置（统一管理）
   const systemTrayEnabled = useAppSettings(state => state.systemTrayEnabled);
   const silentStartEnabled = useAppSettings(state => state.silentStartEnabled);
@@ -109,11 +109,11 @@ const BusinessSettingsDialog: React.FC<BusinessSettingsDialogProps> = ({
       footer={null}
       onCancel={() => onOpenChange(false)}
       title={<div className={"flex flex-row items-center gap-1.5"}>
-        <Settings className="h-4 w-4 text-gray-500"/>
+        <Settings className="h-4 w-4 text-gray-500" />
         <span>{t('title')}</span>
         <span
           className="ml-1 text-xs font-mono text-gray-400 bg-gray-100 dark:bg-gray-800 px-2 py-0.5 rounded-full font-normal">
-          {t('version', {version: appVersion})}
+          {t('version', { version: appVersion })}
         </span>
       </div>
       }
@@ -127,7 +127,7 @@ const BusinessSettingsDialog: React.FC<BusinessSettingsDialogProps> = ({
               value={execPath}
               actionTitle={t('paths.executable')}
               onAction={handleBrowseExecPath}
-              actionIcon={<FileCode className="h-4 w-4 text-gray-500"/>}
+              actionIcon={<FileCode className="h-4 w-4 text-gray-500" />}
             />
 
             <PathSettingRow
@@ -135,23 +135,20 @@ const BusinessSettingsDialog: React.FC<BusinessSettingsDialogProps> = ({
               value={logDirPath}
               actionTitle={t('paths.openLogDirectory')}
               onAction={handleOpenLogDirectory}
-              actionIcon={<FolderOpen className="h-4 w-4 text-gray-500"/>}
+              actionIcon={<FolderOpen className="h-4 w-4 text-gray-500" />}
             />
           </div>
         </div>
 
-        <div className="h-px bg-gray-100 dark:bg-gray-800"/>
+        <div className="h-px bg-gray-100 dark:bg-gray-800" />
 
-        {/* Language Switcher */}
-        <div className="space-y-3">
-          <LanguageSwitcher />
-        </div>
 
-        <div className="h-px bg-gray-100 dark:bg-gray-800"/>
+
+        <div className="h-px bg-gray-100 dark:bg-gray-800" />
 
         <div className="space-y-1">
           <SettingToggle
-            icon={<Monitor className="h-4 w-4 text-blue-500"/>}
+            icon={<Monitor className="h-4 w-4 text-blue-500" />}
             title={t('toggles.systemTray.title')}
             description={t('toggles.systemTray.description')}
             checked={systemTrayEnabled}
@@ -160,7 +157,7 @@ const BusinessSettingsDialog: React.FC<BusinessSettingsDialogProps> = ({
           />
 
           <SettingToggle
-            icon={<VolumeX className="h-4 w-4 text-purple-500"/>}
+            icon={<VolumeX className="h-4 w-4 text-purple-500" />}
             title={t('toggles.silentStart.title')}
             description={t('toggles.silentStart.description')}
             checked={silentStartEnabled}
@@ -169,7 +166,7 @@ const BusinessSettingsDialog: React.FC<BusinessSettingsDialogProps> = ({
           />
 
           <SettingToggle
-            icon={<EyeOff className="h-4 w-4 text-emerald-500"/>}
+            icon={<EyeOff className="h-4 w-4 text-emerald-500" />}
             title={t('toggles.privateMode.title')}
             description={t('toggles.privateMode.description')}
             checked={privateMode}
@@ -178,7 +175,7 @@ const BusinessSettingsDialog: React.FC<BusinessSettingsDialogProps> = ({
           />
 
           <SettingToggle
-            icon={<Bug className="h-4 w-4 text-orange-500"/>}
+            icon={<Bug className="h-4 w-4 text-orange-500" />}
             title={t('toggles.debugMode.title')}
             description={t('toggles.debugMode.description')}
             checked={debugMode}
@@ -187,7 +184,7 @@ const BusinessSettingsDialog: React.FC<BusinessSettingsDialogProps> = ({
           />
         </div>
 
-        <div className="h-px bg-gray-100 dark:bg-gray-800"/>
+        <div className="h-px bg-gray-100 dark:bg-gray-800" />
 
         <div className="space-y-1">
           <a target={"_blank"} href={"https://github.com/MonchiLin/antigravity-agent/issues"}>{t('links.issues')}</a>
