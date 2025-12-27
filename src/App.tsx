@@ -10,10 +10,12 @@ import {AppContent} from "@/components/app/AppContent.tsx";
 import {AppLoader} from "@/components/app/AppLoader.tsx";
 import {PlatformCommands} from "@/commands/PlatformCommands.ts";
 import {useAppSettings} from "@/modules/use-app-settings.ts";
+import {useTranslation} from 'react-i18next';
 
 function App() {
   // ========== 应用状态 ==========
   const [isDetecting, setIsDetecting] = useState(true);
+  const { t } = useTranslation('common');
 
   // ========== Hook 集成 ==========
   useDevToolsShortcut();
@@ -77,10 +79,10 @@ function App() {
         <div className="text-center">
           <div className="animate-spin rounded-full h-16 w-16 mx-auto mb-6 text-blue-500"></div>
           <h2 className="text-2xl font-semibold mb-2 text-gray-800 dark:text-gray-100">
-            正在检测 Antigravity 数据库...
+            {t('app.detecting')}
           </h2>
           <p className="text-gray-500 dark:text-gray-400">
-            请稍候，正在查找 Antigravity 数据库路径
+            {t('app.detectingSubtitle')}
           </p>
         </div>
       </div>

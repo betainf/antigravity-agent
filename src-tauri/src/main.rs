@@ -138,6 +138,8 @@ fn main() {
             save_private_mode_state,
             save_debug_mode_state,
             get_all_settings,
+            get_language,
+            set_language,
             // 数据库监控命令
             is_database_monitoring_running,
             start_database_monitoring,

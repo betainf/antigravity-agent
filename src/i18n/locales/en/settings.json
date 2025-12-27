@@ -1,0 +1,41 @@
+{
+  "title": "Settings",
+  "version": "v{{version}}",
+  "paths": {
+    "executable": "Antigravity Executable",
+    "logDirectory": "Log Directory",
+    "openLogDirectory": "Open Log Directory",
+    "notSet": "Not Set",
+    "autoDetected": " (auto detected)"
+  },
+  "dialogs": {
+    "selectExecutable": "Select Antigravity Executable",
+    "executableFilter": "Executable Files",
+    "allFilesFilter": "All Files"
+  },
+  "toggles": {
+    "systemTray": {
+      "title": "System Tray",
+      "description": "Minimize to tray when closing window"
+    },
+    "silentStart": {
+      "title": "Silent Start",
+      "description": "Automatically hide main window on startup"
+    },
+    "privateMode": {
+      "title": "Privacy Mode",
+      "description": "Obfuscate sensitive information"
+    },
+    "debugMode": {
+      "title": "Debug Mode",
+      "description": "Record more logs (will auto-restart program)"
+    }
+  },
+  "language": {
+    "title": "Language",
+    "description": "Change the interface language"
+  },
+  "links": {
+    "issues": "Report Issues/Request Features"
+  }
+}
