@@ -6,7 +6,9 @@
 
 [![Windows](https://img.shields.io/badge/Windows-0078D6?style=for-the-badge&logo=windows&logoColor=white)](../../releases)
 [![macOS](https://img.shields.io/badge/macOS-000000?style=for-the-badge&logo=apple&logoColor=white)](../../releases)
-[![Ubuntu](https://img.shields.io/badge/Ubuntu-E95420?style=for-the-badge&logo=ubuntu&logoColor=white)](../../releases)
+[![Linux](https://img.shields.io/badge/Linux-FCC624?style=for-the-badge&logo=linux&logoColor=black)](../../releases)
+
+[![Download](https://img.shields.io/badge/Downloads-View_Releases-2ea44f?style=for-the-badge&logo=github)](../../releases)
 
 <br />
 
@@ -16,7 +18,7 @@
 
 <br />
 
-[Download](../../releases)
+
 
 </div>
 
@@ -89,3 +91,10 @@ Switch accounts and view model quota directly in the editor
 | - | Dark Theme |
 | - | Development Process Standardization |
 | - | Version Changelog |
+
+---
+
+## FAQ
+
+- **How to install on Linux?**  
+  We recommend using the Flatpak version for the best experience. Please see the [Flatpak Installation Guide](flatpak-install.en.md).

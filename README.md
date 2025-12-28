@@ -8,7 +8,9 @@
 
 [![Windows](https://img.shields.io/badge/Windows-0078D6?style=for-the-badge&logo=windows&logoColor=white)](../../releases)
 [![macOS](https://img.shields.io/badge/macOS-000000?style=for-the-badge&logo=apple&logoColor=white)](../../releases)
-[![Ubuntu](https://img.shields.io/badge/Ubuntu-E95420?style=for-the-badge&logo=ubuntu&logoColor=white)](../../releases)
+[![Linux](https://img.shields.io/badge/Linux-FCC624?style=for-the-badge&logo=linux&logoColor=black)](../../releases)
+
+[![Download](https://img.shields.io/badge/Downloads-View_Releases-2ea44f?style=for-the-badge&logo=github)](../../releases)
 
 <br />
 
@@ -18,7 +20,7 @@
 
 <br />
 
-[下载安装](../../releases)
+
 
 </div>
 
@@ -91,3 +93,10 @@
 | - | 暗色主题 |
 | - | 开发流程规范化 |
 | - | 版本更新日志 |
+
+---
+
+## 常见问题
+
+- **Linux 用户如何安装？**  
+  我们推荐使用 Flatpak 版本以获得最佳体验。请查看 [Flatpak 安装指南](docs/flatpak-install.zh-CN.md)。
