@@ -153,4 +153,36 @@ jobs:
           # Publish the file we just built
           npx ovsx publish ./antigravity-agent-nightly.vsix --pat "$OVSX_PAT"
 
+  # 第四步：构建 Flatpak (Nightly)
+  build-flatpak:
+    needs: prepare-release
+    runs-on: ubuntu-latest
+    container:
+      image: bilelmoussaoui/flatpak-github-actions:gnome-47
+      options: --privileged
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          ref: dev
+
+      - name: Build Flatpak
+        uses: flatpak/flatpak-github-actions/flatpak-builder@v6
+        with:
+          bundle: antigravity-agent-nightly.flatpak
+          manifest-path: .github/flatpak/com.antigravity-agent.app.yml
+          cache-key: flatpak-builder-${{ github.sha }}
+          # Enable network for source build (npm/cargo)
+          build-args: |
+             --share=network
+
+      - name: Rename Flatpak Bundle
+        run: mv antigravity-agent-nightly.flatpak antigravity-agent_${{ needs.prepare-release.outputs.version }}_amd64.flatpak
+      
+      - name: Upload Flatpak to Release
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh release upload autobuild antigravity-agent_${{ needs.prepare-release.outputs.version }}_amd64.flatpak --clobber --repo "${{ github.repository }}"
+
 

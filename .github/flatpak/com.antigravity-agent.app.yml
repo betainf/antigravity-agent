@@ -1,0 +1,41 @@
+id: com.antigravity-agent.app
+runtime: org.gnome.Platform
+runtime-version: '47'
+sdk: org.gnome.Sdk
+sdk-extensions:
+  - org.freedesktop.Sdk.Extension.rust-stable
+  - org.freedesktop.Sdk.Extension.node22
+command: antigravity-agent
+finish-args:
+  - --share=ipc
+  - --socket=fallback-x11
+  - --socket=wayland
+  - --share=network
+  - --device=dri
+modules:
+  - name: antigravity-agent
+    buildsystem: simple
+    build-options:
+      append-path: /usr/lib/sdk/node22/bin:/usr/lib/sdk/rust-stable/bin
+      env:
+        CARGO_HOME: /run/build/antigravity-agent/cargo
+        npm_config_cache: /run/build/antigravity-agent/npm-cache
+        tauri_build_profile: release
+    build-commands:
+      # Install dependencies and build
+      - npm install
+      - npm run tauri build
+      
+      # Install binary
+      - install -Dm755 src-tauri/target/release/antigravity-agent /app/bin/antigravity-agent
+      
+      # Install resources
+      - install -Dm644 .github/flatpak/antigravity-agent.desktop /app/share/applications/com.antigravity-agent.app.desktop
+      - install -Dm644 .github/flatpak/com.antigravity-agent.app.metainfo.xml /app/share/metainfo/com.antigravity-agent.app.metainfo.xml
+      
+      # Install icons
+      - install -Dm644 src-tauri/icons/128x128.png /app/share/icons/hicolor/128x128/apps/com.antigravity-agent.app.png
+      - install -Dm644 src-tauri/icons/icon.png /app/share/icons/hicolor/512x512/apps/com.antigravity-agent.app.png
+    sources:
+      - type: dir
+        path: ../../
