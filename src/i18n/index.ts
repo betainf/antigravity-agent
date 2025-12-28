@@ -30,7 +30,7 @@ import updateEN from '@/assets/locales/en/update.json';
 import updateZhCN from '@/assets/locales/zh-CN/update.json';
 import updateZhTW from '@/assets/locales/zh-TW/update.json';
 
-const resources = {
+export const resources = {
   en: {
     common: commonEN,
     dashboard: dashboardEN,
@@ -60,39 +60,8 @@ const resources = {
   },
 };
 
-// Initialize with default language, will be updated from Tauri later
-let cachedLanguage: string | null = null;
-
-import { SettingsCommands } from '@/commands/SettingsCommands';
-
-// Custom language detector that uses cached value from Tauri
-const TauriLanguageDetector = {
-  name: 'tauriLanguageDetector',
-  lookup: (): string | undefined => {
-    return cachedLanguage || undefined;
-  },
-  cacheUserLanguage: async (lng: string): Promise<void> => {
-    cachedLanguage = lng;
-    try {
-      await SettingsCommands.setLanguage(lng);
-    } catch (error) {
-      console.error('Failed to save language to Tauri:', error);
-    }
-  },
-};
-
-// Load language from Tauri asynchronously after initialization
-async function loadLanguageFromTauri() {
-  try {
-    const settings = await SettingsCommands.getAll();
-    if (settings?.language) {
-      cachedLanguage = settings.language;
-      await i18n.changeLanguage(settings.language);
-    }
-  } catch (error) {
-    console.error('Failed to load language from Tauri:', error);
-  }
-}
+export const supportedLanguages = ['en', 'zh-CN', 'zh-TW'] as const;
+export type SupportedLanguage = typeof supportedLanguages[number];
 
 i18n
   // Detect user language
@@ -111,12 +80,11 @@ i18n
     },
 
     detection: {
-      // Detection order (tauriLanguageDetector won't block since it's synchronous now)
       order: [
         'navigator',    // Browser language
         'htmlTag',      // HTML tag
       ],
-      caches: [], // Don't use localStorage (we use Tauri)
+      caches: [], // Don't use localStorage
     },
 
     react: {
@@ -137,8 +105,5 @@ i18n
       }
     },
   });
-
-// Load language from Tauri after i18n is initialized
-loadLanguageFromTauri();
 
 export default i18n;

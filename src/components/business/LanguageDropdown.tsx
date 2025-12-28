@@ -8,6 +8,7 @@ import { SettingsCommands } from '@/commands/SettingsCommands.ts';
 import { logger } from '@/lib/logger.ts';
 import toast from 'react-hot-toast';
 import dayjs from 'dayjs';
+import {useAppSettings} from "@/modules/use-app-settings.ts";
 
 interface LanguageSwitcherProps {
   className?: string;
@@ -21,6 +22,7 @@ export const LanguageDropdown: React.FC<LanguageSwitcherProps> = ({
   const { t, i18n } = useTranslation();
   // Loading state not strictly needed for Dropdown but keeping logic same
   const [loading, setLoading] = React.useState(false);
+  const setLanguage = useAppSettings(state => state.setLanguage)
 
   const currentLanguage = i18n.language as SupportedLanguage;
 
@@ -30,10 +32,7 @@ export const LanguageDropdown: React.FC<LanguageSwitcherProps> = ({
     setLoading(true);
     try {
       // Change language in i18next
-      await i18n.changeLanguage(newLanguage);
-
-      // Persist to Tauri backend
-      await SettingsCommands.setLanguage(newLanguage);
+      await setLanguage(newLanguage);
 
       // Update dayjs locale
       const localeMap: Record<SupportedLanguage, string> = {
