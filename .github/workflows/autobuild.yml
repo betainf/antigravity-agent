@@ -170,7 +170,6 @@ jobs:
         # Manually run flatpak-builder to allow custom flags like --share=network
         run: |
           flatpak-builder \
-            --share=network \
             --force-clean \
             --user \
             --install-deps-from=flathub \
