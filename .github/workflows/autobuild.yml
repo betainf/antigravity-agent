@@ -166,18 +166,26 @@ jobs:
         with:
           ref: dev
 
-      - name: Build Flatpak
-        # Manually run flatpak-builder to allow custom flags like --share=network
         run: |
+          # 1. Setup Flathub remote (System-wide)
+          flatpak remote-add --if-not-exists flathub https://dl.flathub.org/repo/flathub.flatpakrepo
+
+          # 2. Install extensions manually to ensure availability
+          # Note: The gnome-47 image might have SDK, but we need extensions
+          flatpak install -y flathub org.freedesktop.Sdk.Extension.rust-stable//24.08
+          flatpak install -y flathub org.freedesktop.Sdk.Extension.node22//24.08
+          flatpak install -y flathub org.gnome.Sdk//47 || true 
+          flatpak install -y flathub org.gnome.Platform//47 || true
+
+          # 3. Build (System-wide, relying on pre-installed deps)
           flatpak-builder \
             --force-clean \
-            --user \
-            --install-deps-from=flathub \
             --repo=repo \
+            --install-deps-from=flathub \
             build-dir \
             .github/flatpak/com.antigravity_agent.app.yml
           
-          # Create the bundle
+          # 4. Bundle
           flatpak build-bundle repo antigravity-agent-nightly.flatpak com.antigravity_agent.app
 
       - name: Rename Flatpak Bundle
