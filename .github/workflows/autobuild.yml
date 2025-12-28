@@ -195,6 +195,7 @@ jobs:
           # 3. Build Flatpak (Binary Wrapper - just extracts .deb)
           flatpak-builder \
             --force-clean \
+            --disable-rofiles-fuse \
             --repo=repo \
             --install-deps-from=flathub \
             build-dir \
