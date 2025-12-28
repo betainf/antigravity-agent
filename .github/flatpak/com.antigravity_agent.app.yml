@@ -1,4 +1,4 @@
-id: com.antigravity-agent.app
+id: com.antigravity_agent.app
 runtime: org.gnome.Platform
 runtime-version: '47'
 sdk: org.gnome.Sdk
@@ -30,12 +30,12 @@ modules:
       - install -Dm755 src-tauri/target/release/antigravity-agent /app/bin/antigravity-agent
       
       # Install resources
-      - install -Dm644 .github/flatpak/antigravity-agent.desktop /app/share/applications/com.antigravity-agent.app.desktop
-      - install -Dm644 .github/flatpak/com.antigravity-agent.app.metainfo.xml /app/share/metainfo/com.antigravity-agent.app.metainfo.xml
+      - install -Dm644 .github/flatpak/antigravity-agent.desktop /app/share/applications/com.antigravity_agent.app.desktop
+      - install -Dm644 .github/flatpak/com.antigravity_agent.app.metainfo.xml /app/share/metainfo/com.antigravity_agent.app.metainfo.xml
       
       # Install icons
-      - install -Dm644 src-tauri/icons/128x128.png /app/share/icons/hicolor/128x128/apps/com.antigravity-agent.app.png
-      - install -Dm644 src-tauri/icons/icon.png /app/share/icons/hicolor/512x512/apps/com.antigravity-agent.app.png
+      - install -Dm644 src-tauri/icons/128x128.png /app/share/icons/hicolor/128x128/apps/com.antigravity_agent.app.png
+      - install -Dm644 src-tauri/icons/icon.png /app/share/icons/hicolor/512x512/apps/com.antigravity_agent.app.png
     sources:
       - type: dir
         path: ../../

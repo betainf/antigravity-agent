@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <component type="desktop-application">
-  <id>com.antigravity-agent.app</id>
+  <id>com.antigravity_agent.app</id>
   <name>Antigravity Agent</name>
   <summary>Antigravity Account management tool</summary>
   <metadata_license>CC0-1.0</metadata_license>
@@ -16,5 +16,5 @@
   <releases>
     <release version="1.5.3" date="2025-12-28" />
   </releases>
-  <launchable type="desktop-id">com.antigravity-agent.app.desktop</launchable>
+  <launchable type="desktop-id">com.antigravity_agent.app.desktop</launchable>
 </component>

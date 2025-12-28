@@ -167,14 +167,19 @@ jobs:
           ref: dev
 
       - name: Build Flatpak
-        uses: flatpak/flatpak-github-actions/flatpak-builder@v6
-        with:
-          bundle: antigravity-agent-nightly.flatpak
-          manifest-path: .github/flatpak/com.antigravity-agent.app.yml
-          cache-key: flatpak-builder-${{ github.sha }}
-          # Enable network for source build (npm/cargo)
-          build-args: |
-             --share=network
+        # Manually run flatpak-builder to allow custom flags like --share=network
+        run: |
+          flatpak-builder \
+            --share=network \
+            --force-clean \
+            --user \
+            --install-deps-from=flathub \
+            --repo=repo \
+            build-dir \
+            .github/flatpak/com.antigravity_agent.app.yml
+          
+          # Create the bundle
+          flatpak build-bundle repo antigravity-agent-nightly.flatpak com.antigravity_agent.app
 
       - name: Rename Flatpak Bundle
         run: mv antigravity-agent-nightly.flatpak antigravity-agent_${{ needs.prepare-release.outputs.version }}_amd64.flatpak
