@@ -63,9 +63,7 @@ jobs:
             - [Apple Silicon](${{ github.server_url }}/${{ github.repository }}/releases/download/autobuild/Antigravity.Agent_aarch64.dmg) | [Intel芯片](${{ github.server_url }}/${{ github.repository }}/releases/download/autobuild/Antigravity.Agent_x86_64.dmg)
             
             ### Linux
-            **AppImage(通用 推荐)**
-            - [Antigravity_Agent.AppImage](${{ github.server_url }}/${{ github.repository }}/releases/download/autobuild/antigravity-agent_amd64.AppImage)
-            - [Antigravity_Agent.deb](${{ github.server_url }}/${{ github.repository }}/releases/download/autobuild/antigravity-agent_amd64.deb)
+            - [Flatpak](${{ github.server_url }}/${{ github.repository }}/releases/download/autobuild/antigravity-agent_amd64.flatpak) | [Deb安装包](${{ github.server_url }}/${{ github.repository }}/releases/download/autobuild/antigravity-agent_amd64.deb)
             ---
 
             🐛 如果发现问题或者需求请求，请[提交 Issue](https://github.com/MonchiLin/antigravity-agent/issues/new)

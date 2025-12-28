@@ -32,7 +32,6 @@
     "targets": [
       "nsis",
       "dmg",
-      "appimage",
       "deb",
       "app"
     ]
