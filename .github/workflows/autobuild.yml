@@ -158,7 +158,7 @@ jobs:
     needs: [prepare-release, build]  # 等待 .deb 构建完成
     runs-on: ubuntu-latest
     container:
-      image: bilelmoussaoui/flatpak-github-actions:gnome-48
+      image: ghcr.io/flathub-infra/flatpak-github-actions:gnome-48
       options: --privileged
     steps:
       - name: Checkout repository
