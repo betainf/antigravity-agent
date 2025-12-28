@@ -166,6 +166,7 @@ jobs:
         with:
           ref: dev
 
+      - name: Build Flatpak
         run: |
           # 1. Setup Flathub remote (System-wide)
           flatpak remote-add --if-not-exists flathub https://dl.flathub.org/repo/flathub.flatpakrepo
