@@ -12,9 +12,12 @@
 
 <br />
 
-<img src="../screenshots/dashboard.png" alt="Antigravity Agent Dashboard" width="700" />
-
-<img src="../screenshots/vscode-extension_dashboard.png" alt="Antigravity Agent VSCode Extension Dashboard" width="700" />
+<table>
+<tr>
+<td><img src="../screenshots/dashboard.png" alt="Antigravity Agent Dashboard" width="400" /></td>
+<td><img src="../screenshots/vscode-extension_dashboard.png" alt="VSCode Extension" width="400" /></td>
+</tr>
+</table>
 
 <br />
 
@@ -95,6 +98,9 @@ Switch accounts and view model quota directly in the editor
 ---
 
 ## FAQ
+
+- **Can't install on macOS?**  
+  As an unsigned app, macOS may block it from running. Please see the [macOS Installation Guide](macos-installation.en.md).
 
 - **How to install on Linux?**  
   We recommend using the Flatpak version for the best experience. Please see the [Flatpak Installation Guide](flatpak-install.en.md).

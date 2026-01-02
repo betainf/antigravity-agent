@@ -14,9 +14,12 @@
 
 <br />
 
-<img src="screenshots/dashboard.png" alt="Antigravity Agent Dashboard" width="700" />
-
-<img src="screenshots/vscode-extension_dashboard.png" alt="Antigravity Agent VSCode Extension Dashboard" width="700" />
+<table>
+<tr>
+<td><img src="screenshots/dashboard.png" alt="Antigravity Agent Dashboard" width="400" /></td>
+<td><img src="screenshots/vscode-extension_dashboard.png" alt="VSCode Extension" width="400" /></td>
+</tr>
+</table>
 
 <br />
 
@@ -33,7 +36,7 @@
 ---
 
 > [!TIP]
-> **Antigravity 扩展已上线！** 从 1.6.0 版本起，您可以安装 [Antigravity 扩展](https://open-vsx.org/extension/MonchiLin/antigravity-agent)，在编辑器内切换账户、实时当前对话和所有模型配额，仅需后台运行 Antigravity Agent 即可。
+> **Antigravity 扩展已上线！** 从 1.6.0 版本起，您可以安装 [Antigravity 扩展](https://open-vsx.org/extension/MonchiLin/antigravity-agent)，在编辑器内切换账户、当前对话和所有模型配额，仅需后台运行 Antigravity Agent 即可。
 
 ## 功能概览
 
@@ -97,6 +100,9 @@
 ---
 
 ## 常见问题
+
+- **macOS 用户无法安装？**  
+  由于应用未签名，macOS 可能会阻止运行。请查看 [macOS 安装指南](docs/macos-installation.zh-CN.md)。
 
 - **Linux 用户如何安装？**  
   我们推荐使用 Flatpak 版本以获得最佳体验。请查看 [Flatpak 安装指南](docs/flatpak-install.zh-CN.md)。
