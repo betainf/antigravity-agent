@@ -11,12 +11,16 @@ import { AccountSessionList, AccountSessionListAccountItem } from "@/components/
 import AccountsListToolbar, { type ListToolbarValue } from "@/components/business/AccountsListToolbar.tsx";
 import { logger } from "@/lib/logger.ts";
 import { useTranslation } from 'react-i18next';
+import dayjs from "dayjs";
 
 const tierRank: Record<UserTier, number> = {
   'g1-ultra-tier': 0,
   'g1-pro-tier': 1,
   'free-tier': 2,
 };
+
+// 获取重置时间戳，用于二级排序（无效值排最后）
+const toTs = (s?: string) => s ? dayjs(s).valueOf() || Infinity : Infinity;
 
 export function AppContent() {
   const { t } = useTranslation(['account', 'notifications']);
@@ -194,6 +198,11 @@ export function AppContent() {
       return matchesQuery && matchesTier;
     })
     .sort((a, b) => {
+      // 当前账户始终置顶
+      const currentEmail = currentAntigravityAccount?.context.email;
+      if (a.email === currentEmail) return -1;
+      if (b.email === currentEmail) return 1;
+
       const nameA = a.nickName || a.email;
       const nameB = b.nickName || b.email;
       const byName = nameA.localeCompare(nameB);
@@ -203,19 +212,23 @@ export function AppContent() {
           return byName;
         case 'claude': {
           const diff = (b.claudeQuote ?? -1) - (a.claudeQuote ?? -1);
-          return diff !== 0 ? diff : byName;
+          if (diff !== 0) return diff;
+          return toTs(a.claudeQuoteRestIn) - toTs(b.claudeQuoteRestIn) || byName;
         }
         case 'gemini-pro': {
           const diff = (b.geminiProQuote ?? -1) - (a.geminiProQuote ?? -1);
-          return diff !== 0 ? diff : byName;
+          if (diff !== 0) return diff;
+          return toTs(a.geminiProQuoteRestIn) - toTs(b.geminiProQuoteRestIn) || byName;
         }
         case 'gemini-flash': {
           const diff = (b.geminiFlashQuote ?? -1) - (a.geminiFlashQuote ?? -1);
-          return diff !== 0 ? diff : byName;
+          if (diff !== 0) return diff;
+          return toTs(a.geminiFlashQuoteRestIn) - toTs(b.geminiFlashQuoteRestIn) || byName;
         }
         case 'gemini-image': {
           const diff = (b.geminiImageQuote ?? -1) - (a.geminiImageQuote ?? -1);
-          return diff !== 0 ? diff : byName;
+          if (diff !== 0) return diff;
+          return toTs(a.geminiImageQuoteRestIn) - toTs(b.geminiImageQuoteRestIn) || byName;
         }
         case 'tier': {
           const diff = tierRank[a.tier] - tierRank[b.tier];
