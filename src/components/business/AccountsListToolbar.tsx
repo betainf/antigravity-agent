@@ -3,7 +3,7 @@ import { ArrowUpDown, Search, X } from 'lucide-react';
 import { cn } from '@/lib/utils.ts';
 import { BaseInput } from '@/components/base-ui/BaseInput';
 import type { UserTier } from '@/modules/use-account-addition-data.ts';
-import { Select as AntSelect } from 'antd';
+import { Select as AntSelect, Tooltip } from 'antd';
 import { LineShadowText } from "@/components/ui/line-shadow-text.tsx";
 import UpdateBadge from "@/components/business/UpdateBadge.tsx";
 import { useTranslation } from 'react-i18next';
@@ -11,7 +11,7 @@ import { LanguageDropdown } from '@/components/business/LanguageDropdown.tsx';
 import { useAntigravityAccount } from '@/modules/use-antigravity-account.ts';
 import { AccountTriggerCommands } from '@/commands/AccountTriggerCommands.ts';
 import toast from 'react-hot-toast';
-import { RefreshCw } from "lucide-react";
+import { RefreshCw, Flame } from "lucide-react";
 
 export type ListSortKey = 'name' | 'claude' | 'gemini-pro' | 'gemini-flash' | 'gemini-image' | 'tier';
 export type ListToolbarValue = {
@@ -89,7 +89,6 @@ const AccountsListToolbar: React.FC<BusinessListToolbarProps> = ({
   const [isRefreshing, setIsRefreshing] = React.useState(false);
 
   const handleRefreshAll = async () => {
-    console.log("REFRESH: Button Clicked");
     if (isRefreshing) return;
     if (accounts.length === 0) {
       toast.error(t('toolbar.noAccounts'));
@@ -308,19 +307,23 @@ const AccountsListToolbar: React.FC<BusinessListToolbarProps> = ({
 
         {/* Refresh All Button */}
         <div className="h-4 w-px bg-slate-200 dark:bg-slate-700 mx-1" />
-        <button
-          onClick={handleRefreshAll}
-          disabled={isRefreshing}
-          className={cn(
-            "p-1.5 rounded-lg border transition-colors relative group",
-            "bg-slate-50 dark:bg-slate-800/60 border-slate-200 dark:border-slate-700",
-            "hover:bg-white dark:hover:bg-slate-700",
-            isRefreshing ? "cursor-not-allowed opacity-70" : "cursor-pointer"
-          )}
-          title={t('toolbar.refreshQuotaTooltip')}
+        <Tooltip
+          title={<div className="whitespace-pre-wrap text-xs">{t('toolbar.refreshQuotaTooltip')}</div>}
+          overlayStyle={{ maxWidth: 300 }}
         >
-          <RefreshCw className={cn("h-4 w-4 text-slate-600 dark:text-slate-300", isRefreshing && "animate-spin")} />
-        </button>
+          <button
+            onClick={handleRefreshAll}
+            disabled={isRefreshing}
+            className={cn(
+              "p-1.5 rounded-lg border transition-colors relative group",
+              "bg-slate-50 dark:bg-slate-800/60 border-slate-200 dark:border-slate-700",
+              "hover:bg-white dark:hover:bg-slate-700",
+              isRefreshing ? "cursor-not-allowed opacity-70" : "cursor-pointer"
+            )}
+          >
+            <Flame className={cn("h-4 w-4 text-amber-600 dark:text-amber-500", isRefreshing && "animate-pulse")} />
+          </button>
+        </Tooltip>
       </div>
     </div>
   );

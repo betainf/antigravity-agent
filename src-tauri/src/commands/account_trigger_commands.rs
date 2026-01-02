@@ -81,9 +81,9 @@ pub async fn run_trigger_logic(
     let mut skipped_details = Vec::new();
 
     for item in quotas {
-        // Only trigger if quota is effectively full (> 99%)
+        // Only trigger if quota is effectively full (> 99.99%)
         // The user said "model with 100% remaining"
-        if item.percentage > 0.99 {
+        if item.percentage > 0.9999 {
             info!("Model {} has full quota ({}%), triggering...", item.model_key, item.percentage * 100.0);
             
             match trigger_minimal_query(&access_token, &project, &item.model_key).await {
@@ -166,7 +166,7 @@ async fn trigger_minimal_query(access_token: &str, project: &str, model_key: &st
             "contents": [
                 {
                     "role": "user",
-                    "parts": [{ "text": "Hi, this is an automated quota check. Please respond briefly." }]
+                    "parts": [{ "text": format!("Hi, this is an automated quota check. Please respond briefly. [Ref: {}]", chrono::Utc::now().to_rfc3339()) }]
                 }
             ],
             "generationConfig": {

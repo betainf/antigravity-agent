@@ -3,10 +3,10 @@
     "accounts": "Accounts",
     "searchPlaceholder": "Search email or nickname...",
     "filterAll": "All",
-    "refreshQuotaTooltip": "Refresh Quota (Send minimal tokens to reset timer)",
-    "refreshingQuota": "Triggering minimal quota queries...",
-    "refreshComplete": "Refresh triggered for {{count}} models",
-    "refreshError": "Failed to trigger quota refresh",
+    "refreshQuotaTooltip": "Preheat Account Quota Reset Time\n\nQuotas usually start their reset cycle only after first usage. This feature force-starts the timer for idle accounts.\n\nExample: Free accounts reset every 7 days.\nIf you wait until Wednesday to use an account, it resets next Wednesday.\nIf you use Preheat today, the reset timer starts immediately.",
+    "refreshingQuota": "Preheating accounts (consuming minimal tokens)...",
+    "refreshComplete": "Preheat triggered for {{count}} models",
+    "refreshError": "Failed to trigger account preheat",
     "noAccounts": "No accounts available"
   },
   "sort": {

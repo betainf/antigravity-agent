@@ -2,7 +2,12 @@
   "toolbar": {
     "accounts": "账户",
     "searchPlaceholder": "搜索邮箱或昵称...",
-    "filterAll": "全部"
+    "filterAll": "全部",
+    "refreshQuotaTooltip": "预热配额重置时间\n\n配额通常在首次使用后才开始计算重置周期。此功能为闲置账号强制启动计时。\n\n举例：免费账户每 7 天重置。\n假如您周三才使用某账号，它将在下周三重置。\n若您现在使用预热功能，则直接激活倒计时，让重置时间提前开始。",
+    "refreshingQuota": "正在预热账号 (消耗极少量 Token)...",
+    "refreshComplete": "已触发 {{count}} 个模型的预热",
+    "refreshError": "触发账号预热失败",
+    "noAccounts": "暂无可用账户"
   },
   "sort": {
     "name": "用户名首字母",
