@@ -43,6 +43,7 @@ export async function activate(context: vscode.ExtensionContext) {
 
     // Initialize Managers
     StatusBarManager.initialize(statusBarItem, context);
+    StatusBarManager.registerAnalyticsInterceptor(context);
     BrowserHandler.initialize(context);
 
     context.subscriptions.push(statusBarItem);

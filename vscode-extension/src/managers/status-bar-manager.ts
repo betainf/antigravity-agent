@@ -37,6 +37,33 @@ export class StatusBarManager {
         context.subscriptions.push({ dispose: () => this.stopPolling() });
     }
 
+    /**
+     * Registers the analytics interceptor to capture model usage events.
+     * When the IDE broadcasts CASCADE_MESSAGE_SENT, update the status bar.
+     * @param context The extension context.
+     */
+    public static registerAnalyticsInterceptor(context: vscode.ExtensionContext) {
+        try {
+            const disposable = vscode.commands.registerCommand(
+                'antigravity.sendAnalyticsAction',
+                (...args: any[]) => {
+                    // Check for Chat Message events where model info is present
+                    if (args.length > 1 && args[0] === 'CASCADE_MESSAGE_SENT') {
+                        const payload = args[1];
+                        if (payload?.model_name) {
+                            this.updateWithModelUsage(payload.model_name);
+                            Logger.log(`🤖 Model Detected: ${payload.model_name}`);
+                        }
+                    }
+                }
+            );
+            context.subscriptions.push(disposable);
+            Logger.log('✅ Analytics Interceptor Ready');
+        } catch (e) {
+            Logger.log('❌ Failed to register Analytics Interceptor', e);
+        }
+    }
+
     private static startPolling(intervalMs: number = 30000) {
         this.stopPolling();
         // Initial fetch
