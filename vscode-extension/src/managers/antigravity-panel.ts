@@ -74,6 +74,12 @@ export class AntigravityPanel {
                         case 'setAutoAccept':
                             AutoAcceptManager.toggle(message.enabled);
                             break;
+                        case 'getAutoPilotState':
+                            this._panel.webview.postMessage({
+                                command: 'autoPilotState',
+                                enabled: AutoAcceptManager.isEnabled()
+                            });
+                            break;
                         case 'openExternal':
                             if (message.url) {
                                 const t = TranslationManager.getInstance().t.bind(TranslationManager.getInstance());
@@ -114,6 +120,13 @@ export class AntigravityPanel {
 
     private _update() {
         this._panel.webview.html = this._getHtmlForWebview(this._panel.webview);
+        // Send initial Auto Pilot state after a short delay to ensure Webview is ready
+        setTimeout(() => {
+            this._panel.webview.postMessage({
+                command: 'autoPilotState',
+                enabled: AutoAcceptManager.isEnabled()
+            });
+        }, 100);
     }
 
     private _getHtmlForWebview(webview: vscode.Webview): string {

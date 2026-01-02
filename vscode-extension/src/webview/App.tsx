@@ -1,8 +1,8 @@
-import {VSCodeCheckbox} from '@vscode/webview-ui-toolkit/react';
-import React, {useState} from 'react';
-import {useTranslation} from 'react-i18next';
-import {AccountsTab} from './components/AccountsTab';
-import {LanguageSwitcher} from './components/LanguageSwitcher';
+import { VSCodeCheckbox } from '@vscode/webview-ui-toolkit/react';
+import React, { useState, useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
+import { AccountsTab } from './components/AccountsTab';
+import { LanguageSwitcher } from './components/LanguageSwitcher';
 import './App.css';
 
 // Acquire VS Code API singleton
@@ -19,6 +19,18 @@ const vscodeApi = (() => {
 const App: React.FC = () => {
     const { t } = useTranslation(['dashboard', 'common']);
     const [autoAccept, setAutoAccept] = useState(false);
+
+    // Listen for state messages from Extension Host
+    useEffect(() => {
+        const handleMessage = (event: MessageEvent) => {
+            const message = event.data;
+            if (message.command === 'autoPilotState') {
+                setAutoAccept(message.enabled);
+            }
+        };
+        window.addEventListener('message', handleMessage);
+        return () => window.removeEventListener('message', handleMessage);
+    }, []);
 
     const toggleAutoAccept = () => {
         const newState = !autoAccept;

@@ -1,13 +1,38 @@
+import * as vscode from 'vscode';
 import { Logger } from '../utils/logger';
 import { AutomationEngine } from '../services/automation-engine';
+
+const STATE_KEY = 'autoPilotEnabled';
 
 /**
  * Manages the "Auto Pilot" mode which automatically accepts suggestions and runs commands.
  * Orchestrates the automation cycle with randomized timing.
+ * State is persisted globally across sessions using globalState.
  */
 export class AutoAcceptManager {
     private static enabled = false;
     private static timer: NodeJS.Timeout | undefined;
+    private static context: vscode.ExtensionContext | undefined;
+
+    /**
+     * Initializes the manager and restores persisted state.
+     * @param context The extension context for globalState access.
+     */
+    public static initialize(context: vscode.ExtensionContext) {
+        this.context = context;
+        const savedState = context.globalState.get<boolean>(STATE_KEY, false);
+        if (savedState) {
+            Logger.log('🚁 Auto Pilot: Restoring saved state (enabled)');
+            this.toggle(true);
+        }
+    }
+
+    /**
+     * Returns the current enabled state.
+     */
+    public static isEnabled(): boolean {
+        return this.enabled;
+    }
 
     /**
      * Toggles the Smart Pilot mode (Auto-Accept).
@@ -15,6 +40,12 @@ export class AutoAcceptManager {
      */
     public static toggle(enabled: boolean) {
         this.enabled = enabled;
+
+        // Persist to globalState
+        if (this.context) {
+            this.context.globalState.update(STATE_KEY, enabled);
+        }
+
         if (this.enabled) {
             Logger.log('🚁 Smart Pilot: Engaged');
             this.scheduleNextRun();
@@ -55,3 +86,4 @@ export class AutoAcceptManager {
         }
     }
 }
+
