@@ -25,6 +25,8 @@
     "loginNew": "登录新账户",
     "import": "导入账户",
     "exportAll": "导出所有账户",
-    "preferences": "偏好设置"
+    "preferences": "偏好设置",
+    "installExtension": "安装 Antigravity Agent 扩展",
+    "installingExtension": "正在安装..."
   }
 }

@@ -7,4 +7,4 @@ pub mod tray;
 
 // Re-export the main structs for convenience
 pub use manager::SystemTrayManager;
-pub use tray::{create_tray_with_return, update_tray_menu};
+pub use tray::{create_tray_with_return, update_tray_menu, TrayMenuLabels};

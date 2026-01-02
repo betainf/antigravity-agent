@@ -7,8 +7,7 @@ import { languages, type SupportedLanguage } from '@/i18n/config.ts';
 import { SettingsCommands } from '@/commands/SettingsCommands.ts';
 import { logger } from '@/lib/logger.ts';
 import toast from 'react-hot-toast';
-import dayjs from 'dayjs';
-import {useAppSettings} from "@/modules/use-app-settings.ts";
+import { useAppSettings } from "@/modules/use-app-settings.ts";
 
 interface LanguageSwitcherProps {
   className?: string;
@@ -34,15 +33,11 @@ export const LanguageDropdown: React.FC<LanguageSwitcherProps> = ({
       // Change language in i18next
       await setLanguage(newLanguage);
 
-      // Update dayjs locale
-      const localeMap: Record<SupportedLanguage, string> = {
-        'en': 'en',
-        'zh-CN': 'zh-cn',
-        'zh-TW': 'zh-tw',
-      };
-      dayjs.locale(localeMap[newLanguage]);
 
-      toast.success(t('settings:language.changeSuccess'));
+
+      // Use i18n.t to ensure we get the translation for the NEW language
+      // The 't' from useTranslation is bound to the render cycle's language (old language)
+      toast.success(i18n.t('settings:language.changeSuccess'));
 
       logger.info('Language changed', {
         module: 'LanguageDropdown',
@@ -50,7 +45,7 @@ export const LanguageDropdown: React.FC<LanguageSwitcherProps> = ({
         to: newLanguage,
       });
     } catch (error) {
-      toast.error(t('settings:language.changeError'));
+      toast.error(i18n.t('settings:language.changeError'));
       logger.error('Failed to change language', {
         module: 'LanguageDropdown',
         error: error instanceof Error ? error.message : String(error),

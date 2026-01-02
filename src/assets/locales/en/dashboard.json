@@ -25,6 +25,8 @@
     "loginNew": "Login New Account",
     "import": "Import Accounts",
     "exportAll": "Export All Accounts",
-    "preferences": "Preferences"
+    "preferences": "Preferences",
+    "installExtension": "Install Antigravity Agent Extension",
+    "installingExtension": "Installing..."
   }
 }

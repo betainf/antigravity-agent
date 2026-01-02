@@ -30,5 +30,13 @@
         "downloading": "正在下载更新 {{percentage}}%",
         "ready": "更新已下载，点击重启安装",
         "check": "点击查看更新"
+    },
+    "error": {
+        "noUpdateAvailable": "没有可用更新",
+        "checkFailed": "检查更新失败",
+        "noUpdateToDownload": "没有待下载的更新",
+        "downloadFailed": "下载更新失败",
+        "noUpdateToInstall": "没有待安装的更新",
+        "installFailed": "安装更新失败"
     }
 }

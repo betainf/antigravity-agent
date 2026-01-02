@@ -17,7 +17,8 @@
     "next": "Next",
     "ok": "OK",
     "copy": "Copy",
-    "use": "Use"
+    "use": "Use",
+    "install": "Install"
   },
   "labels": {
     "email": "Email",
@@ -33,11 +34,16 @@
   },
   "status": {
     "unknown": "Unknown",
-    "notSet": "Not Set"
+    "notSet": "Not Set",
+    "resetTime": "Reset in"
   },
   "tier": {
     "free": "Free",
     "pro": "Pro",
     "ultra": "Ultra"
+  },
+  "tray": {
+    "showMain": "Show Main Window",
+    "quit": "Quit"
   }
 }

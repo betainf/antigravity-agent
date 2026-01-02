@@ -30,5 +30,13 @@
         "downloading": "Downloading update {{percentage}}%",
         "ready": "Update downloaded, click to restart and install",
         "check": "Click to check for updates"
+    },
+    "error": {
+        "noUpdateAvailable": "No update available",
+        "checkFailed": "Failed to check for updates",
+        "noUpdateToDownload": "No update to download",
+        "downloadFailed": "Failed to download update",
+        "noUpdateToInstall": "No update to install",
+        "installFailed": "Failed to install update"
     }
 }

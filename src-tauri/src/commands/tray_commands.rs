@@ -1,4 +1,4 @@
-use crate::system_tray::{update_tray_menu, SystemTrayManager};
+use crate::system_tray::{update_tray_menu, SystemTrayManager, TrayMenuLabels};
 use tauri::Manager;
 
 /// 更新托盘菜单（新增命令，供前端调用）
@@ -6,8 +6,9 @@ use tauri::Manager;
 pub async fn update_tray_menu_command(
     app: tauri::AppHandle,
     accounts: Vec<String>,
+    labels: Option<TrayMenuLabels>,
 ) -> Result<String, String> {
-    update_tray_menu(&app, accounts)?;
+    update_tray_menu(&app, accounts, labels)?;
     Ok("托盘菜单已更新".to_string())
 }
 

@@ -72,7 +72,7 @@ const BusinessUserDetail: React.FC<BusinessUserDetailProps> = ({
             size="icon"
             className="absolute top-1 right-1 h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity"
             onClick={() => copyToClipboard(value, fieldName)}
-            title={t('common:actions.copy')}
+            title={t('common:buttons.copy')}
           >
             {copiedField === fieldName ? (
               <Check className="h-3.5 w-3.5 text-green-600" />

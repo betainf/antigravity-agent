@@ -3,5 +3,27 @@
   "fetchUserDataFailed": "Failed to fetch additional user data",
   "operationCancelled": "Operation cancelled",
   "languageChanged": "Language changed successfully",
-  "languageChangeFailed": "Failed to change language"
+  "languageChangeFailed": "Failed to change language",
+  "backup": {
+    "noImportFile": "No import file pending",
+    "decrypting": "Decrypting file with Rust...",
+    "invalidConfig": "Invalid configuration file format",
+    "restoring": "Restoring account data...",
+    "restorePartialSuccess": "Import successful, restored {{success}} accounts, {{failed}} failed",
+    "restoreSuccess": "Import successful, restored {{count}} accounts",
+    "importFailed": "Import failed: {{error}}",
+    "noExportData": "No data to export",
+    "generatingConfig": "Generating encrypted configuration...",
+    "configGenerated": "Configuration data generated",
+    "selectLocation": "Select save location",
+    "saveSuccess": "Configuration saved: {{path}}",
+    "collectingData": "Collecting account data...",
+    "exportFailed": "Export failed: {{error}}",
+    "noAccountToExport": "No account information found to export"
+  },
+  "account": {
+    "loginFailed": "Failed to login new account",
+    "switchSuccess": "Switched to account: {{email}}",
+    "noValidAccount": "No valid account information detected"
+  }
 }

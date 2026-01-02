@@ -8,6 +8,7 @@ import GeminiProIcon from '@/assets/icons/gemini_pro.png'
 import GeminiFlashIcon from '@/assets/icons/gemini_flash.png'
 import dayjs from "dayjs";
 import { Tooltip } from "antd";
+import { useTranslation } from "react-i18next";
 
 type LiquidProgressBarType = 'gemini-pro' | 'gemini-flash' | 'claude' | 'gemini-image';
 
@@ -86,6 +87,7 @@ export function LiquidProgressBar({
     resetIn,
     className
 }: LiquidProgressBarProps) {
+    const { t } = useTranslation('common');
     const { label, iconSrc, colorFrom, colorTo, iconColor } = typeConfig[type];
 
     const isUnknown = percentage === -1;
@@ -150,13 +152,13 @@ export function LiquidProgressBar({
                     {isUnknown && (
                         <div className="flex items-center gap-1 px-2 py-0.5 rounded-full bg-slate-200/50 text-slate-500 border border-slate-200/50">
                             <HelpCircle size={10} />
-                            <span className="text-[10px] font-medium">Unknown</span>
+                            <span className="text-[10px] font-medium">{t('status.unknown')}</span>
                         </div>
                     )}
 
                     {/* Timer Badge */}
                     {!isUnknown && finalShowTimer && (
-                        <Tooltip title={`重置时间: ${dayjs.utc(resetIn).toDate().toLocaleString()}`} placement="top">
+                        <Tooltip title={`${t('status.resetTime')}: ${dayjs.utc(resetIn).toDate().toLocaleString()}`} placement="top">
                             <div className={cn(
                                 "flex items-center gap-1 px-1.5 py-0.5 rounded-full text-[10px] font-bold leading-none cursor-help transition-colors",
                                 // Visual contrast check

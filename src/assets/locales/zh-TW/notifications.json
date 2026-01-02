@@ -3,5 +3,27 @@
   "fetchUserDataFailed": "取得使用者額外資料失敗",
   "operationCancelled": "操作已取消",
   "languageChanged": "語言切換成功",
-  "languageChangeFailed": "語言切換失敗"
+  "languageChangeFailed": "語言切換失敗",
+  "backup": {
+    "noImportFile": "沒有待處理的匯入檔案",
+    "decrypting": "正在使用 Rust 解密檔案...",
+    "invalidConfig": "配置檔案格式無效",
+    "restoring": "正在還原賬戶資料...",
+    "restorePartialSuccess": "配置檔案匯入成功，已還原 {{success}} 個賬戶，{{failed}} 個失敗",
+    "restoreSuccess": "配置檔案匯入成功，已還原 {{count}} 個賬戶",
+    "importFailed": "配置檔案匯入失敗: {{error}}",
+    "noExportData": "沒有待處理的匯出資料",
+    "generatingConfig": "正在生成加密配置檔案...",
+    "configGenerated": "配置資料已生成",
+    "selectLocation": "選擇儲存位置",
+    "saveSuccess": "配置檔案已儲存: {{path}}",
+    "collectingData": "正在收集賬戶資料...",
+    "exportFailed": "匯出配置檔案失敗: {{error}}",
+    "noAccountToExport": "沒有找到任何賬戶資訊，無法匯出配置檔案"
+  },
+  "account": {
+    "loginFailed": "登入新賬戶操作失敗",
+    "switchSuccess": "已切換到賬戶: {{email}}",
+    "noValidAccount": "未檢測到有效的賬戶資訊"
+  }
 }

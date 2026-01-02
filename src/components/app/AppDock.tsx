@@ -94,7 +94,7 @@ const AppDock = () => {
       <div className="fixed bottom-4 left-1/2 transform -translate-x-1/2 z-40">
         <Dock>
           <DockIcon onClick={install}>
-            <AnimatedTooltip text={isInstalling ? "正在安装..." : "安装 Antigravity Agent 扩展"}>
+            <AnimatedTooltip text={isInstalling ? t('dashboard:actions.installingExtension') : t('dashboard:actions.installExtension')}>
               <Rocket className={`size-6 ${isInstalling ? 'animate-pulse text-blue-500' : ''}`} />
             </AnimatedTooltip>
           </DockIcon>

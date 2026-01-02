@@ -3,14 +3,15 @@
  * 直接使用 Zustand，集成所有配置管理逻辑，提供完整接口
  */
 
-import {create} from 'zustand';
-import {open, save} from '@tauri-apps/plugin-dialog';
-import {readTextFile} from '@tauri-apps/plugin-fs';
-import {logger} from '@/lib/logger.ts';
+import { create } from 'zustand';
+import { open, save } from '@tauri-apps/plugin-dialog';
+import { readTextFile } from '@tauri-apps/plugin-fs';
+import { logger } from '@/lib/logger.ts';
 import toast from 'react-hot-toast';
-import {AccountManageCommands} from "@/commands/AccountManageCommands.ts";
-import {BackupData} from "@/commands/types/account-manage.types.ts";
-import {LoggingCommands} from "@/commands/LoggingCommands.ts";
+import { AccountManageCommands } from "@/commands/AccountManageCommands.ts";
+import { BackupData } from "@/commands/types/account-manage.types.ts";
+import { LoggingCommands } from "@/commands/LoggingCommands.ts";
+import i18n from '@/i18n';
 
 interface EncryptedConfigData {
   version: string;
@@ -98,14 +99,14 @@ export const useImportExportAccount = create<ConfigState & ConfigActions>()(
         // 在方法开始时捕获所需状态，避免竞态条件
         const { pendingImportPath } = get();
         if (!pendingImportPath) {
-          toast.error('没有待处理的导入文件');
+          toast.error(i18n.t('notifications:backup.noImportFile'));
           return;
         }
 
         try {
           get().closeImportDialog();
           set({ isImporting: true });
-          toast.loading('正在使用 Rust 解密文件...', {duration: 1});
+          toast.loading(i18n.t('notifications:backup.decrypting'), { duration: 1 });
 
           // 读取文件并解密
           const encryptedFile = await readTextFile(pendingImportPath);
@@ -114,14 +115,14 @@ export const useImportExportAccount = create<ConfigState & ConfigActions>()(
 
           // 验证配置数据格式
           if (!configData.version || !configData.backups || !Array.isArray(configData.backups)) {
-            throw new Error('配置文件格式无效');
+            throw new Error(i18n.t('notifications:backup.invalidConfig'));
           }
 
           logger.info('开始恢复备份数据', {
             module: 'useImportExportAccount',
             backupCount: configData.backups.length
           });
-          toast.loading('正在恢复账户数据...', {duration: 1});
+          toast.loading(i18n.t('notifications:backup.restoring'), { duration: 1 });
 
           const result = await AccountManageCommands.restoreBackupFiles(configData.backups);
 
@@ -132,13 +133,13 @@ export const useImportExportAccount = create<ConfigState & ConfigActions>()(
               failedCount: result.failed.length,
               failedFiles: result.failed
             });
-            toast.success(`配置文件导入成功，已恢复 ${result.restoredCount} 个账户，${result.failed.length} 个失败`);
+            toast.success(i18n.t('notifications:backup.restorePartialSuccess', { success: result.restoredCount, failed: result.failed.length }));
           } else {
             logger.info('所有文件恢复成功', {
               module: 'useImportExportAccount',
               restoredCount: result.restoredCount
             });
-            toast.success(`配置文件导入成功，已恢复 ${result.restoredCount} 个账户`);
+            toast.success(i18n.t('notifications:backup.restoreSuccess', { count: result.restoredCount }));
           }
         } catch (error) {
           logger.error('导入失败', {
@@ -146,7 +147,7 @@ export const useImportExportAccount = create<ConfigState & ConfigActions>()(
             stage: 'import_process',
             error: error instanceof Error ? error.message : String(error)
           });
-          toast.error(`配置文件导入失败: ${error instanceof Error ? error.message : String(error)}`);
+          toast.error(i18n.t('notifications:backup.importFailed', { error: error instanceof Error ? error.message : String(error) }));
         } finally {
           set({ isImporting: false });
         }
@@ -156,14 +157,14 @@ export const useImportExportAccount = create<ConfigState & ConfigActions>()(
         // 在方法开始时捕获所需状态，避免竞态条件
         const { pendingExportData } = get();
         if (!pendingExportData || pendingExportData.length === 0) {
-          toast.error('没有待处理的导出数据');
+          toast.error(i18n.t('notifications:backup.noExportData'));
           return;
         }
 
         try {
           get().closeExportDialog();
           set({ isExporting: true });
-          toast.loading('正在生成加密配置文件...', {duration: 1});
+          toast.loading(i18n.t('notifications:backup.generatingConfig'), { duration: 1 });
 
           // 构建配置数据
           const configData: EncryptedConfigData = {
@@ -189,11 +190,11 @@ export const useImportExportAccount = create<ConfigState & ConfigActions>()(
           const defaultFileName = `antigravity_encrypted_config_${timestamp}.enc`;
 
           const savePath = await save({
-            title: '保存配置文件',
+            title: i18n.t('notifications:backup.selectLocation'),
             defaultPath: defaultFileName,
             filters: [
               {
-                name: 'Antigravity 加密配置文件',
+                name: 'Antigravity Encrypted Config',
                 extensions: ['enc']
               }
             ]
@@ -210,7 +211,7 @@ export const useImportExportAccount = create<ConfigState & ConfigActions>()(
           // 保存加密文件
           await LoggingCommands.writeTextFile(savePath, encryptedData);
 
-          toast.success(`配置文件已保存: ${savePath}`);
+          toast.success(i18n.t('notifications:backup.saveSuccess', { path: savePath }));
           logger.info('导出配置成功', {
             module: 'useImportExportAccount',
             savePath,
@@ -224,7 +225,7 @@ export const useImportExportAccount = create<ConfigState & ConfigActions>()(
             stage: 'password_validation',
             error: error instanceof Error ? error.message : String(error)
           });
-          toast.error(`导出配置文件失败: ${error instanceof Error ? error.message : String(error)}`);
+          toast.error(i18n.t('notifications:backup.exportFailed', { error: error instanceof Error ? error.message : String(error) }));
         } finally {
           set({ isExporting: false });
         }
@@ -237,14 +238,14 @@ export const useImportExportAccount = create<ConfigState & ConfigActions>()(
         try {
           // 选择文件
           const selected = await open({
-            title: '选择配置文件',
+            title: i18n.t('notifications:backup.selectLocation'), // Reusing selectLocation for consistency or use new key
             filters: [
               {
-                name: '加密配置文件',
+                name: 'Antigravity Encrypted Config',
                 extensions: ['enc']
               },
               {
-                name: '所有文件',
+                name: 'All Files',
                 extensions: ['*']
               }
             ],
@@ -255,7 +256,7 @@ export const useImportExportAccount = create<ConfigState & ConfigActions>()(
             logger.warn('未选择文件', {
               module: 'useImportExportAccount'
             });
-            toast.error('未选择文件');
+            // toast.error('未选择文件');
             return;
           }
 
@@ -273,7 +274,7 @@ export const useImportExportAccount = create<ConfigState & ConfigActions>()(
             stage: 'file_selection',
             error: error instanceof Error ? error.message : String(error)
           });
-          toast.error(`文件操作失败: ${error instanceof Error ? error.message : String(error)}`);
+          // toast.error(`文件操作失败: ${error instanceof Error ? error.message : String(error)}`);
         }
       },
 
@@ -282,7 +283,7 @@ export const useImportExportAccount = create<ConfigState & ConfigActions>()(
         logger.info('开始导出配置', { module: 'useImportExportAccount' });
 
         try {
-          toast.loading('正在收集账户数据...', {duration: 1});
+          toast.loading(i18n.t('notifications:backup.collectingData'), { duration: 1 });
 
           // ✅ 获取包含完整内容的备份数据
           const accountContents = await AccountManageCommands.collectAccountContents();
@@ -291,7 +292,7 @@ export const useImportExportAccount = create<ConfigState & ConfigActions>()(
             logger.warn('没有找到账户信息', {
               module: 'useImportExportAccount'
             });
-            toast.error('没有找到任何账户信息，无法导出配置文件');
+            toast.error(i18n.t('notifications:backup.noAccountToExport'));
             return;
           }
 
@@ -309,7 +310,7 @@ export const useImportExportAccount = create<ConfigState & ConfigActions>()(
             stage: 'data_collection',
             error: error instanceof Error ? error.message : String(error)
           });
-          toast.error(`检查数据失败: ${error instanceof Error ? error.message : String(error)}`);
+          toast.error(i18n.t('notifications:backup.exportFailed', { error: error instanceof Error ? error.message : String(error) }));
         }
       }
     };

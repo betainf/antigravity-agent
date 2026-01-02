@@ -1,9 +1,10 @@
-import {useEffect} from "react";
-import {listen} from "@tauri-apps/api/event";
-import {logger} from "../lib/logger.ts";
-import {useAntigravityAccount} from "@/modules/use-antigravity-account.ts";
-import {TrayCommands} from "@/commands/TrayCommands.ts";
+import { useEffect, useCallback } from "react";
+import { listen } from "@tauri-apps/api/event";
+import { logger } from "../lib/logger.ts";
+import { useAntigravityAccount } from "@/modules/use-antigravity-account.ts";
+import { TrayCommands } from "@/commands/TrayCommands.ts";
 import toast from "react-hot-toast";
+import { useTranslation } from "react-i18next";
 
 /**
  * 系统托盘菜单更新 Hook
@@ -11,20 +12,25 @@ import toast from "react-hot-toast";
  */
 export function useTrayMenu() {
   const { accounts, switchToAccount } = useAntigravityAccount();
+  const { t, i18n } = useTranslation('common');
 
   // 更新托盘菜单
-  const updateTrayMenu = async (accounts: string[]) => {
+  const updateTrayMenu = useCallback(async (accountsList: string[]) => {
     try {
-      logger.info("更新托盘菜单", { accountCount: accounts.length });
+      logger.info("更新托盘菜单", { accountCount: accountsList.length });
 
-      await TrayCommands.updateMenu(accounts);
+      const labels = {
+        show_main: t('tray.showMain'),
+        quit: t('tray.quit'),
+      };
+
+      await TrayCommands.updateMenu(accountsList, labels);
 
       logger.info("托盘菜单更新成功");
     } catch (error) {
       logger.error("更新托盘菜单失败", error);
-      // 不显示 toast 错误，因为这可能在后台发生
     }
-  };
+  }, [t]);
 
   // 监听来自后端的账户切换请求
   useEffect(() => {
@@ -34,27 +40,22 @@ export function useTrayMenu() {
 
       try {
         await switchToAccount(email);
-        toast.success(`已切换到账户: ${email}`);
+        toast.success(t('notifications:account.switchSuccess', { email }));
       } catch (error) {
         logger.error("托盘账户切换失败", error);
-        toast.error(`切换账户失败: ${error}`);
+        toast.error(`切换账户失败: ${error}`); // This should ideally be translated too but dynamic error messages are tricky
       }
     });
 
     return () => {
       unlisten.then(f => f());
     };
-  }, [switchToAccount]);
+  }, [switchToAccount, t]);
 
-  // 当账户列表变化时更新托盘菜单
+  // 当账户列表或语言变化时更新托盘菜单
   useEffect(() => {
-    if (accounts.length > 0) {
-      // 提取邮箱列表并更新托盘菜单
-      const emails = accounts.map((user) => user.context.email);
-      updateTrayMenu(emails);
-    } else {
-      // 没有账户时清空托盘菜单
-      updateTrayMenu([]);
-    }
-  }, [accounts.length]);
+    // 提取邮箱列表并更新托盘菜单
+    const emails = accounts.map((user) => user.context.email);
+    updateTrayMenu(emails);
+  }, [accounts.length, updateTrayMenu, i18n.language]);
 }

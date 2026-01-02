@@ -3,5 +3,27 @@
   "fetchUserDataFailed": "获取用户额外数据失败",
   "operationCancelled": "操作已取消",
   "languageChanged": "语言切换成功",
-  "languageChangeFailed": "语言切换失败"
+  "languageChangeFailed": "语言切换失败",
+  "backup": {
+    "noImportFile": "没有待处理的导入文件",
+    "decrypting": "正在使用 Rust 解密文件...",
+    "invalidConfig": "配置文件格式无效",
+    "restoring": "正在恢复账户数据...",
+    "restorePartialSuccess": "配置文件导入成功，已恢复 {{success}} 个账户，{{failed}} 个失败",
+    "restoreSuccess": "配置文件导入成功，已恢复 {{count}} 个账户",
+    "importFailed": "配置文件导入失败: {{error}}",
+    "noExportData": "没有待处理的导出数据",
+    "generatingConfig": "正在生成加密配置文件...",
+    "configGenerated": "配置数据已生成",
+    "selectLocation": "选择保存位置",
+    "saveSuccess": "配置文件已保存: {{path}}",
+    "collectingData": "正在收集账户数据...",
+    "exportFailed": "导出配置文件失败: {{error}}",
+    "noAccountToExport": "没有找到任何账户信息，无法导出配置文件"
+  },
+  "account": {
+    "loginFailed": "登录新账户操作失败",
+    "switchSuccess": "已切换到账户: {{email}}",
+    "noValidAccount": "未检测到有效的账户信息"
+  }
 }

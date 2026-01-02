@@ -20,6 +20,8 @@
     "loginNew": "登入新帳戶",
     "import": "匯入帳戶",
     "exportAll": "匯出所有帳戶",
-    "preferences": "偏好設定"
+    "preferences": "偏好設定",
+    "installExtension": "安裝 Antigravity Agent 擴充功能",
+    "installingExtension": "正在安裝..."
   }
 }

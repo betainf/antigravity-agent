@@ -6,6 +6,23 @@ use crate::app_settings::AppSettingsManager;
 use tauri::menu::{Menu, MenuBuilder, MenuItem};
 use tauri::tray::{TrayIcon, TrayIconBuilder};
 use tauri::{AppHandle, Emitter, Manager};
+use serde::Deserialize;
+use std::time::{SystemTime, UNIX_EPOCH};
+
+#[derive(Debug, Deserialize, Clone)]
+pub struct TrayMenuLabels {
+    pub show_main: String,
+    pub quit: String,
+}
+
+impl Default for TrayMenuLabels {
+    fn default() -> Self {
+        Self {
+            show_main: "Show Main Window".to_string(),
+            quit: "Quit".to_string(),
+        }
+    }
+}
 
 /// 创建系统托盘（返回托盘实例）
 pub fn create_tray_with_return(app: &AppHandle) -> Result<TrayIcon, String> {
@@ -50,20 +67,26 @@ fn handle_tray_menu_event(app: &AppHandle, event: tauri::menu::MenuEvent) {
     tracing::info!("处理托盘菜单事件: {}", event.id.0);
 
     match event.id.0.as_str() {
-        "show_main" => {
+        id if id.starts_with("show_main") => {
             if let Some(window) = app.get_webview_window("main") {
                 let _ = window.unminimize();
                 let _ = window.show();
                 let _ = window.set_focus();
             }
         }
-        "quit" => {
+        id if id.starts_with("quit") => {
             tracing::info!("退出应用");
             app.exit(0);
         }
         // 账户切换事件
-        account_id if account_id.starts_with("account_") => {
-            let account_email = account_id.strip_prefix("account_").unwrap_or("");
+        account_id if account_id.starts_with("account#") => {
+            // ID Format: account#{nonce}#{email}
+            let parts: Vec<&str> = account_id.splitn(3, '#').collect();
+            if parts.len() < 3 {
+                tracing::warn!("无效的账户菜单ID: {}", account_id);
+                return;
+            }
+            let account_email = parts[2];
             tracing::info!("请求切换到账户: {account_email}");
 
             // 发射事件到前端
@@ -78,7 +101,7 @@ fn handle_tray_menu_event(app: &AppHandle, event: tauri::menu::MenuEvent) {
 }
 
 /// 更新托盘菜单（添加账户列表）
-pub fn update_tray_menu(app: &AppHandle, accounts: Vec<String>) -> Result<(), String> {
+pub fn update_tray_menu(app: &AppHandle, accounts: Vec<String>, labels: Option<TrayMenuLabels>) -> Result<(), String> {
     // 检查托盘是否应该启用
     let settings_manager = app.state::<AppSettingsManager>();
     let settings = settings_manager.get_settings();
@@ -92,12 +115,21 @@ pub fn update_tray_menu(app: &AppHandle, accounts: Vec<String>) -> Result<(), St
         return Err("未找到系统托盘".to_string());
     };
 
+    // 使用默认或传入的标签
+    let menu_labels = labels.unwrap_or_default();
+
     // 创建包含账户列表的完整菜单
     let mut menu_builder = MenuBuilder::new(app);
 
+    // Generate unique nonce for this update to avoid ID collisions
+    let nonce = SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .unwrap_or_default()
+        .as_nanos();
+
     // 显示主窗口
     menu_builder = menu_builder.item(
-        &MenuItem::with_id(app, "show_main", "显示主窗口", true, None::<&str>)
+        &MenuItem::with_id(app, format!("show_main#{}", nonce), &menu_labels.show_main, true, None::<&str>)
             .map_err(|e| format!("创建显示主窗口菜单失败: {e}"))?,
     );
 
@@ -110,7 +142,7 @@ pub fn update_tray_menu(app: &AppHandle, accounts: Vec<String>) -> Result<(), St
             menu_builder = menu_builder.item(
                 &MenuItem::with_id(
                     app,
-                    format!("account_{}", account),
+                    format!("account#{}#{}", nonce, account),
                     &masked_email,
                     true,
                     None::<&str>,
@@ -122,7 +154,7 @@ pub fn update_tray_menu(app: &AppHandle, accounts: Vec<String>) -> Result<(), St
 
     // 退出应用
     menu_builder = menu_builder.separator().item(
-        &MenuItem::with_id(app, "quit", "退出应用", true, None::<&str>)
+        &MenuItem::with_id(app, format!("quit#{}", nonce), &menu_labels.quit, true, None::<&str>)
             .map_err(|e| format!("创建退出菜单失败: {e}"))?,
     );
 
