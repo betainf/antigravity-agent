@@ -208,7 +208,9 @@ jobs:
             fi
           fi
 
-
+          # Linux
+          if [ "$PLATFORM" = "ubuntu-22.04" ]; then
+            if [ -d "$BUNDLE_DIR/deb" ]; then
               (
                 cd "$BUNDLE_DIR/deb/"
                 for file in *.deb; do

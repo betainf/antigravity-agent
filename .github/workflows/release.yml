@@ -125,28 +125,18 @@ jobs:
         working-directory: ./vscode-extension
         run: npm ci
 
-      - name: Bump to Build Version
-        id: bump
-        working-directory: ./vscode-extension
-        run: |
-          TIMESTAMP=$(date +%Y%m%d%H%M)
-          # Create unique build version e.g. 1.5.3-build.2023...
-          npm version prerelease --preid="build.$TIMESTAMP" --no-git-tag-version
-          
-          NEW_VERSION=$(node -p "require('./package.json').version")
-          echo "version=$NEW_VERSION" >> $GITHUB_OUTPUT
-          echo "📍 Build Version: $NEW_VERSION"
+
 
       - name: Build and Package Extension
         working-directory: ./vscode-extension
-        run: npx @vscode/vsce package --out ./antigravity-agent-${{ steps.bump.outputs.version }}.vsix
+        run: npx @vscode/vsce package --out ./antigravity-agent-${{ steps.version.outputs.version }}.vsix
 
       - name: Upload Extension to Release
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           TAG: ${{ needs.prepare-release.outputs.tag }}
         run: |
-          gh release upload "$TAG" vscode-extension/antigravity-agent-${{ steps.bump.outputs.version }}.vsix --clobber --repo "${{ github.repository }}"
+          gh release upload "$TAG" vscode-extension/antigravity-agent-${{ steps.version.outputs.version }}.vsix --clobber --repo "${{ github.repository }}"
 
       - name: Publish to Open VSX
         working-directory: ./vscode-extension
@@ -157,4 +147,4 @@ jobs:
             echo "⚠️ OVSX_PAT secret not found, skipping Open VSX publish"
             exit 0
           fi
-          npx ovsx publish ./antigravity-agent-${{ steps.bump.outputs.version }}.vsix --pat "$OVSX_PAT"
+          npx ovsx publish ./antigravity-agent-${{ steps.version.outputs.version }}.vsix --pat "$OVSX_PAT"
