@@ -1,4 +1,4 @@
-import { invoke } from '@tauri-apps/api/core';
+import { universalInvoke } from '@/lib/invoke-adapter';
 import type { FrontendLogEntry } from './types/logging.types';
 
 /**
@@ -10,21 +10,21 @@ export class LoggingCommands {
    * @param logEntry 日志条目
    */
   static async writeFrontendLog(logEntry: FrontendLogEntry): Promise<void> {
-    return invoke('write_frontend_log', { logEntry });
+    return universalInvoke('write_frontend_log', { logEntry });
   }
 
   /**
    * 打开日志目录（在系统文件管理器中打开）
    */
   static async openLogDirectory(): Promise<void> {
-    return invoke('open_log_directory');
+    return universalInvoke('open_log_directory');
   }
 
   /**
    * 获取日志目录路径
    */
   static async getLogDirectoryPath(): Promise<string> {
-    return invoke('get_log_directory_path');
+    return universalInvoke('get_log_directory_path');
   }
 
   /**
@@ -34,6 +34,6 @@ export class LoggingCommands {
    * @returns 写入结果消息
    */
   static async writeTextFile(path: string, content: string): Promise<string> {
-    return invoke('write_text_file', { path, content });
+    return universalInvoke('write_text_file', { path, content });
   }
 }

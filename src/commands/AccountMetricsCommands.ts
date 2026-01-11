@@ -1,4 +1,4 @@
-import { invoke } from '@tauri-apps/api/core';
+import { universalInvoke } from '@/lib/invoke-adapter';
 import { AccountMetrics } from '@/commands/types/account.types.ts';
 
 export class AccountMetricsCommands {
@@ -7,6 +7,6 @@ export class AccountMetricsCommands {
      * @param email 账户邮箱
      */
     static async getAccountMetrics(email: string): Promise<AccountMetrics> {
-        return invoke('get_account_metrics', { email });
+        return universalInvoke('get_account_metrics', { email });
     }
 }

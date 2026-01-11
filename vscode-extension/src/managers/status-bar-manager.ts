@@ -1,8 +1,14 @@
 import * as vscode from 'vscode';
+import dayjs from 'dayjs';
 import { Logger } from '../utils/logger';
 import { AccountMetrics } from '@/commands/types/account.types';
 import { getQuotaCategory } from '../constants/model-mappings';
 import { TranslationManager } from './translation-manager';
+import { API_CONFIG } from '../constants/api';
+// Dynamic import or require is used inside render to avoid top-level issues if needed, 
+// but standard import is better if file exists. 
+// However, since we just added the file, let's use standard import.
+import { maskEmail } from '../utils/string-masking';
 
 interface CurrentAccount {
     context: {
@@ -19,22 +25,56 @@ interface CurrentAccount {
  */
 export class StatusBarManager {
     private static interval: NodeJS.Timeout | undefined;
-    private static statusBarItem: vscode.StatusBarItem;
-    private static readonly API_BASE = 'http://127.0.0.1:18888/api';
+    private static metricsItem: vscode.StatusBarItem; // Display Model & Quota
+    private static userItem: vscode.StatusBarItem;    // Display User Email
+    private static readonly API_BASE = API_CONFIG.BASE_URL;
 
     private static currentMetrics: AccountMetrics | null = null;
+    private static currentAccount: CurrentAccount | null = null;
     private static lastModelName: string = 'Gemini 3 Pro (High)'; // Default Model Name
     private static currentPollDuration: number = 30000;
+    private static isMaskingEnabled: boolean = false;
 
     /**
      * Initializes the status bar manager.
-     * @param item The status bar item to manage.
+     * @param metricsItem The status bar item for metrics (Left).
+     * @param userItem The status bar item for user info (Right).
      * @param context The extension context.
      */
-    public static initialize(item: vscode.StatusBarItem, context: vscode.ExtensionContext) {
-        this.statusBarItem = item;
+    public static initialize(metricsItem: vscode.StatusBarItem, userItem: vscode.StatusBarItem, context: vscode.ExtensionContext) {
+        this.metricsItem = metricsItem;
+        this.userItem = userItem;
+
+        // Read initial config
+        const config = vscode.workspace.getConfiguration('antigravity-agent');
+        this.isMaskingEnabled = config.get<boolean>('privacy', false);
+        Logger.log(`[StatusBar] Initial Privacy Mode: ${this.isMaskingEnabled}`);
+
         this.startPolling();
         context.subscriptions.push({ dispose: () => this.stopPolling() });
+
+        // Listen for configuration changes
+        context.subscriptions.push(vscode.workspace.onDidChangeConfiguration(e => {
+            if (e.affectsConfiguration('antigravity-agent.privacy')) {
+                const newPrivacy = vscode.workspace.getConfiguration('antigravity-agent').get<boolean>('privacy', false);
+                Logger.log(`[StatusBar] Privacy Mode Changed to: ${newPrivacy}`);
+                this.setMasking(newPrivacy);
+            }
+        }));
+    }
+
+    public static setMasking(enabled: boolean) {
+        Logger.log(`[StatusBar] Setting masking to: ${enabled}`);
+        this.isMaskingEnabled = enabled;
+
+        // Re-render immediately if we have data
+        if (this.currentMetrics && this.currentAccount) {
+            this.render(this.currentMetrics, this.currentAccount);
+        } else {
+            Logger.log('[StatusBar] Missing metrics or account data, skipping immediate render');
+            // Try updating just in case
+            this.update();
+        }
     }
 
     /**
@@ -103,11 +143,12 @@ export class StatusBarManager {
         const t = TranslationManager.getInstance().t.bind(TranslationManager.getInstance());
         try {
             // 1. Get Current Account
-            const accRes = await fetch(`${this.API_BASE}/get_current_antigravity_account_info`);
+            const accRes = await fetch(`${this.API_BASE}/${API_CONFIG.ENDPOINTS.GET_CURRENT_ACCOUNT}`);
 
             // Connection successful - reset warning visual
-            this.statusBarItem.color = undefined;
-            this.statusBarItem.backgroundColor = undefined;
+            this.metricsItem.color = undefined;
+            this.metricsItem.backgroundColor = undefined;
+            this.userItem.color = undefined;
 
             // Switch back to normal polling (30s) if we were in fast recovery mode
             if (this.currentPollDuration !== 30000) {
@@ -118,24 +159,29 @@ export class StatusBarManager {
 
             if (!accRes.ok) throw new Error('Failed to fetch account info');
             const currentAccount = await accRes.json() as CurrentAccount | null;
+            this.currentAccount = currentAccount;
 
             if (!currentAccount || !currentAccount.context?.email) {
-                this.statusBarItem.tooltip = t('status.noAccount');
-                this.statusBarItem.text = `$(account) ${t('status.none')}`;
+                this.metricsItem.text = `$(antigravity-logo) ${t('status.none')}`;
+                this.metricsItem.tooltip = t('status.noAccount');
+
+                this.userItem.text = `$(account) Not Logged In`;
+                this.userItem.tooltip = t('status.noAccount');
                 return;
             }
 
             const email = currentAccount.context.email;
 
             // 2. Get Metrics
-            const metricRes = await fetch(`${this.API_BASE}/get_account_metrics`, {
+            const metricRes = await fetch(`${this.API_BASE}/${API_CONFIG.ENDPOINTS.GET_METRICS}`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ email })
             });
 
             if (!metricRes.ok) {
-                this.statusBarItem.tooltip = `Current: ${email}\n(Failed to load metrics)`;
+                this.metricsItem.tooltip = `Current: ${email}\n(Failed to load metrics)`;
+                this.userItem.text = `$(account) ${email}`;
                 return;
             }
 
@@ -144,10 +190,15 @@ export class StatusBarManager {
 
         } catch (error) {
             // Connection Error Handling
+            const errMsg = t('status.offline');
+            const bgError = new vscode.ThemeColor('errorForeground');
 
-            this.statusBarItem.text = `$(debug-disconnect) ${t('status.offline')}`;
-            this.statusBarItem.tooltip = t('status.connectError');
-            this.statusBarItem.color = new vscode.ThemeColor('errorForeground');
+            this.metricsItem.text = `$(debug-disconnect) ${errMsg}`;
+            this.metricsItem.tooltip = t('status.connectError');
+            this.metricsItem.color = bgError;
+
+            this.userItem.text = `$(account) Offline`;
+            this.userItem.color = bgError;
 
             // Switch to fast polling (5s) for quick recovery detection
             if (this.currentPollDuration !== 5000) {
@@ -159,51 +210,126 @@ export class StatusBarManager {
 
     private static render(metrics: AccountMetrics, currentAccount?: CurrentAccount) {
         if (!metrics) return;
-        const t = TranslationManager.getInstance().t.bind(TranslationManager.getInstance());
 
-        // 3. Build Tooltip
-        const md = new vscode.MarkdownString();
-        md.isTrusted = true;
+        // --- Render User Item ---
+        let email = currentAccount?.context.email || '';
+        if (this.isMaskingEnabled && email) {
+            try {
+                email = maskEmail(email);
+            } catch (e) {
+                Logger.log('Failed to mask email', e);
+            }
+        }
 
         if (currentAccount) {
-            const email = currentAccount.context.email;
-            const plan = currentAccount.context.plan?.slug || 'UNKNOWN';
-            md.appendMarkdown(`**${t('status.tooltip.user')}**: ${email}\n\n`);
-            md.appendMarkdown(`**${t('status.tooltip.plan')}**: ${plan}\n\n`);
-            md.appendMarkdown(`---\n\n`);
-        }
-
-        if (metrics.quotas && metrics.quotas.length > 0) {
-            md.appendMarkdown(`| ${t('status.tooltip.model')} | ${t('status.tooltip.remaining')} | ${t('status.tooltip.reset')} |\n`);
-            md.appendMarkdown(`|---|---|---|\n`);
-
-            metrics.quotas.forEach(q => {
-                const remaining = Math.round(q.percentage * 100);
-                const isWarning = q.percentage < 0.2;
-                const remainingStr = isWarning ? `**${remaining}%** 🔴` : `${remaining}%`;
-
-                md.appendMarkdown(`| ${q.model_name} | ${remainingStr} | ${q.reset_text || '-'} |\n`);
-            });
+            this.userItem.text = `$(account) ${email}`;
+            this.userItem.show();
         } else {
-            md.appendMarkdown(`*${t('status.tooltip.noQuota')}*`);
+            this.userItem.hide();
         }
 
-        this.statusBarItem.tooltip = md;
+        // --- Render Metrics Item ---
+        this.metricsItem.tooltip = this.renderTooltip(metrics, currentAccount, email);
 
-        // 4. Update Status Bar Text
-        // Resolve category for quota lookup
+        // Update Status Bar Text
         const category = getQuotaCategory(this.lastModelName);
-
-        // Find quota for that category
         const targetQuota = metrics.quotas.find(q => q.model_name.includes(category));
 
         if (targetQuota) {
             const percentage = Math.round(targetQuota.percentage * 100);
-            // Display: $(coffee) [Model Name]: [Quota]%
-            this.statusBarItem.text = `$(coffee) ${this.lastModelName}: ${percentage}%`;
+            this.metricsItem.text = `$(antigravity-logo) ${this.lastModelName}: ${percentage}%`;
         } else {
-            // Fallback
-            this.statusBarItem.text = `$(coffee) ${this.lastModelName}`;
+            this.metricsItem.text = `$(antigravity-logo) ${this.lastModelName}`;
         }
+        this.metricsItem.show();
+    }
+
+    /**
+     * Generates a rich Markdown tooltip for the metrics item.
+     * Table Layout: Value precision and standard overview.
+     */
+    private static renderTooltip(metrics: AccountMetrics, currentAccount: CurrentAccount | undefined, displayEmail: string): vscode.MarkdownString {
+        const md = new vscode.MarkdownString();
+        md.isTrusted = true;
+        md.supportHtml = true;
+
+        if (!currentAccount) {
+            md.appendMarkdown(`$(warning) **Not Logged In**`);
+            return md;
+        }
+
+        // 1. Header: User & Plan
+        // Try to get the best display name for the plan
+        let plan =
+            currentAccount.context.plan?.display_name ||
+            currentAccount.context.plan?.tier_name ||
+            currentAccount.context.plan?.slug ||
+            currentAccount.context.plan_name ||
+            'UNKNOWN';
+
+        // Prettify if it looks like a slug (contains underscores or dashes)
+        if (plan.includes('_') || plan.includes('-')) {
+            plan = plan.split(/[-_]/).map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
+        }
+
+        md.appendMarkdown(`**Account**: ${displayEmail} &nbsp;|&nbsp; **Plan**: ${plan}\n\n`);
+
+        // 2. Table of Models
+        if (metrics.quotas.length > 0) {
+            md.appendMarkdown(`| Model | Usage | Reset |\n`);
+            md.appendMarkdown(`|:---|:---|:---|\n`);
+
+            metrics.quotas.forEach(q => {
+                const per = Math.round(q.percentage * 100);
+                const bar = this.generateProgressBar(q.percentage, 10);
+
+                // Icon Logic
+                let icon = ''; // Icons inside table can be noisy, but let's try minimal or just bold text
+                // Actually user screenshot didn't show icons in the table text, just bold names.
+                // But let's keep icons if they fit, or just name. The screenshot showed "Gemini Pro"
+
+                // Clean Name
+                const name = q.model_name.replace('Quota', '').trim();
+
+                // Reset Time
+                let resetTime = '-';
+                if (q.reset_text && dayjs(q.reset_text).isValid()) {
+                    // Short format: 14h 30m? Or just HH:mm
+                    // To keep it compact let's try a simple format or 'in Xh'
+                    // For now, full date or standard time is safer unless we implement 'fromNow'
+                    resetTime = dayjs(q.reset_text).format('HH:mm');
+
+                    // Calculate hours left roughly if date is future
+                    const diffH = dayjs(q.reset_text).diff(dayjs(), 'hour');
+                    if (diffH > 0 && diffH < 24) {
+                        resetTime = `${diffH}h left`;
+                    } else if (diffH <= 0) {
+                        // Do nothing, maybe 'Now'
+                    }
+                }
+
+                // Table Row
+                // Note: Using `code` block for bar ensures monospace alignment
+                md.appendMarkdown(`| **${name}** | \`${bar}\` ${per}% | ${resetTime} |\n`);
+            });
+        }
+
+        return md;
+    }
+
+    /**
+     * Generates a Unicode block progress bar.
+     * @param percentage 0.0 to 1.0
+     * @param length Number of blocks
+     */
+    private static generateProgressBar(percentage: number, length: number = 10): string {
+        const fillCount = Math.round(percentage * length);
+        const emptyCount = length - fillCount;
+
+        // Full Block: █, Light Shade: ░
+        const filled = '█'.repeat(Math.max(0, fillCount));
+        const empty = '░'.repeat(Math.max(0, emptyCount));
+
+        return `${filled}${empty}`;
     }
 }

@@ -57,9 +57,9 @@ import { Logger } from '../utils/logger';
  * WebSocket 服务器地址
  *
  * 与 Tauri 后端的 Actix 服务器地址一致。
- * 默认运行在 localhost:18888。
+ * 默认运行在 localhost:56789。
  */
-const WS_URL = 'ws://127.0.0.1:18888/ws';
+const WS_URL = 'ws://127.0.0.1:56789/ws';
 
 /**
  * 重连延迟（毫秒）

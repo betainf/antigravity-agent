@@ -1,10 +1,6 @@
-//! 平台支持命令
-//! 负责获取平台信息、安装位置验证等跨平台操作
-
 use serde_json::Value;
 
 /// 获取平台信息
-#[tauri::command]
 pub async fn get_platform_info() -> Result<Value, String> {
     let os_type = std::env::consts::OS;
     let arch = std::env::consts::ARCH;
@@ -26,7 +22,6 @@ pub async fn get_platform_info() -> Result<Value, String> {
 }
 
 /// 查找 Antigravity 安装位置
-#[tauri::command]
 pub async fn find_antigravity_installations() -> Result<Vec<String>, String> {
     let paths = crate::platform::find_antigravity_installations();
     Ok(paths
@@ -36,7 +31,6 @@ pub async fn find_antigravity_installations() -> Result<Vec<String>, String> {
 }
 
 /// 验证 Antigravity 可执行文件路径
-#[tauri::command]
 pub async fn validate_antigravity_executable(path: String) -> Result<bool, String> {
     Ok(crate::antigravity::path_config::validate_executable_path(
         &path,
@@ -44,7 +38,6 @@ pub async fn validate_antigravity_executable(path: String) -> Result<bool, Strin
 }
 
 /// 检测 Antigravity 安装状态（数据库路径）
-#[tauri::command]
 pub async fn detect_antigravity_installation() -> Result<serde_json::Value, String> {
     // 自动检测 Antigravity 数据库路径
     if let Some(db_path) = crate::platform::get_antigravity_db_path() {
@@ -75,7 +68,6 @@ pub async fn detect_antigravity_installation() -> Result<serde_json::Value, Stri
 }
 
 /// 检测 Antigravity 可执行文件
-#[tauri::command]
 pub async fn detect_antigravity_executable() -> Result<serde_json::Value, String> {
     // 1. 尝试从配置读取自定义可执行文件路径
     let custom_exec = crate::antigravity::path_config::get_custom_executable_path().unwrap_or(None);
@@ -113,7 +105,6 @@ pub async fn detect_antigravity_executable() -> Result<serde_json::Value, String
 }
 
 /// 保存用户自定义的 Antigravity 可执行文件路径
-#[tauri::command]
 pub async fn save_antigravity_executable(path: String) -> Result<String, String> {
     // 1. 验证路径有效性
     if !crate::antigravity::path_config::validate_executable_path(&path) {
@@ -127,7 +118,6 @@ pub async fn save_antigravity_executable(path: String) -> Result<String, String>
 }
 
 /// 获取当前配置的路径
-#[tauri::command]
 pub async fn get_current_paths() -> Result<serde_json::Value, String> {
     let exec_path = crate::antigravity::path_config::get_custom_executable_path().unwrap_or(None);
 

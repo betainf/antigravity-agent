@@ -26,11 +26,16 @@ pub struct AntigravityAccount {
 }
 
 #[derive(Debug, Serialize, Deserialize)]
-pub struct AppState {
+pub struct InnerState {
     pub profiles: HashMap<String, ProfileInfo>,
     pub config_dir: PathBuf,
     pub antigravity_accounts: HashMap<String, AntigravityAccount>,
     pub current_account_id: Option<String>,
+}
+
+#[derive(Debug, Clone)]
+pub struct AppState {
+    pub inner: std::sync::Arc<parking_lot::Mutex<InnerState>>,
 }
 
 impl Default for AppState {
@@ -38,11 +43,15 @@ impl Default for AppState {
         // 使用统一的配置目录
         let config_dir = directories::get_config_directory();
 
-        Self {
+        let inner = InnerState {
             profiles: HashMap::new(),
             config_dir,
             antigravity_accounts: HashMap::new(),
             current_account_id: None,
+        };
+
+        Self {
+            inner: std::sync::Arc::new(parking_lot::Mutex::new(inner)),
         }
     }
 }

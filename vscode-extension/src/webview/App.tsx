@@ -19,6 +19,7 @@ const vscodeApi = (() => {
 const App: React.FC = () => {
     const { t } = useTranslation(['dashboard', 'common']);
     const [autoAccept, setAutoAccept] = useState(false);
+    const [privacyMode, setPrivacyMode] = useState(false);
 
     // Listen for state messages from Extension Host
     useEffect(() => {
@@ -26,6 +27,8 @@ const App: React.FC = () => {
             const message = event.data;
             if (message.command === 'autoPilotState') {
                 setAutoAccept(message.enabled);
+            } else if (message.command === 'privacyModeState') {
+                setPrivacyMode(message.enabled);
             }
         };
         window.addEventListener('message', handleMessage);
@@ -43,10 +46,13 @@ const App: React.FC = () => {
         }
     };
 
-    const handleReload = () => {
+    const togglePrivacyMode = () => {
+        const newState = !privacyMode;
+        setPrivacyMode(newState);
         if (vscodeApi) {
             vscodeApi.postMessage({
-                command: 'reloadWindow'
+                command: 'setPrivacyMode',
+                enabled: newState
             });
         }
     };
@@ -72,13 +78,13 @@ const App: React.FC = () => {
                     >
                         {t('dashboard:actions.autoPilot')}
                     </VSCodeCheckbox>
-                    <VSCodeButton
-                        appearance="secondary"
-                        className="h-6 text-[12px]"
-                        onClick={handleReload}
+                    <VSCodeCheckbox
+                        checked={privacyMode}
+                        onChange={togglePrivacyMode}
+                        className="text-[12px] opacity-70"
                     >
-                        Reload
-                    </VSCodeButton>
+                        Privacy Mode
+                    </VSCodeCheckbox>
                 </div>
             </div>
 

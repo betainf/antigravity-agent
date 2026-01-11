@@ -6,7 +6,7 @@ import { AutoAcceptManager } from './managers/auto-accept-manager';
 import { initializeWebSocket } from './services/websocket-client';
 
 
-export let statusBarItem: vscode.StatusBarItem;
+// export let statusBarItem: vscode.StatusBarItem; // Removed global export as now passed into manager directly
 
 /**
  * Activates the Antigravity VS Code Extension.
@@ -35,15 +35,24 @@ export async function activate(context: vscode.ExtensionContext) {
         })
     );
 
-    // Initialize Status Bar
-    // Priority 10000 ensures it's on the far right (or far left depending on layout logic)
-    statusBarItem = vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Right, 10000);
-    statusBarItem.text = "$(coffee) Antigravity Agent";
-    statusBarItem.command = "antigravity.agent.open_dashboard";
-    statusBarItem.show();
+    // Initialize Status Bar Items
+
+    // 1. Metrics Item (Left): Shows Logo + Model/Quota
+    // Priority 10000
+    const metricsItem = vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Right, 10000);
+    metricsItem.text = "$(antigravity-logo) Loading...";
+    metricsItem.command = "antigravity.agent.open_dialog"; // or open_dashboard
+    metricsItem.show();
+
+    // 2. User Item (Right): Shows Account Info
+    // Priority 9999 (To the right of Metrics)
+    const userItem = vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Right, 9999);
+    userItem.text = "$(account) Loading...";
+    userItem.command = "antigravity.agent.open_dialog";
+    userItem.show();
 
     // Initialize Managers
-    StatusBarManager.initialize(statusBarItem, context);
+    StatusBarManager.initialize(metricsItem, userItem, context);
     StatusBarManager.registerAnalyticsInterceptor(context);
 
     AutoAcceptManager.initialize(context);
@@ -51,14 +60,12 @@ export async function activate(context: vscode.ExtensionContext) {
     // Initialize WebSocket for bidirectional communication with Tauri backend
     initializeWebSocket(context);
 
-    context.subscriptions.push(statusBarItem);
+    context.subscriptions.push(metricsItem);
+    context.subscriptions.push(userItem);
 }
 
 export function updateStatusBar(text: string) {
-    if (statusBarItem) {
-        statusBarItem.text = text;
-        statusBarItem.show();
-    }
+    // Legacy support or remove if unused
 }
 
 export function deactivate() { }

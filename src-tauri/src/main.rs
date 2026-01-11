@@ -15,11 +15,11 @@ mod directories;
 mod platform;
 mod proto;
 mod server; // New module
+mod services; // Service layer
 mod system_tray;
 mod utils;
 mod window;
 
-mod commands;
 mod db_monitor;
 mod path_utils;
 mod setup;
@@ -27,9 +27,6 @@ mod state;
 
 // Re-export AppState for compatibility with other modules
 pub use state::{AntigravityAccount, AppState, ProfileInfo};
-
-// Use commands
-use crate::commands::*;
 
 /// 初始化双层日志系统（控制台 + 文件）
 fn init_tracing() -> WorkerGuard {
@@ -97,8 +94,8 @@ fn main() {
         Err(e) => tracing::error!(target: "app::startup", "⚠️ 账户目录迁移检查失败: {}", e),
     }
 
-    // 初始化 AppState，并使用 parking_lot::Mutex 包装以供 actix-web 使用
-    let app_state = std::sync::Arc::new(parking_lot::Mutex::new(AppState::default()));
+    // 初始化 AppState (内部已包含 Arc<Mutex>)
+    let app_state = AppState::default();
 
     tauri::Builder::default()
         .plugin(tauri_plugin_os::init())
@@ -108,76 +105,19 @@ fn main() {
         .plugin(tauri_plugin_updater::Builder::new().build())
         .plugin(tauri_plugin_process::init())
         .plugin(tauri_plugin_http::init())
-        .manage(AppState::default()) // 依然保持 Tauri 自己的状态管理（如果不想大规模重构）
-        // 注意：这里我们其实有两份 AppState：
-        // 1. Tauri 内部管理的（通过 .manage()）
-        // 2. 传递给 actix-web 的（通过闭包捕获）
-        // 这是一个折衷方案，因为 Tauri 的 State<T> 很难直接传递给 actix-web
-        // 为了保持数据一致性，我们应该尽可能让 actix-web 调用 tauri 的 command 或者 service 层
-        // 在 server/mod.rs 中，我们尝试复用逻辑，但如果逻辑依赖 State<AppState>，会导致问题
-        // 理想情况是将 AppState 提取为全局单例或 Arc<Mutex<AppState>> 共享
-        //
-        // 鉴于时间，我们这里启动 server，并在 server 中使用独立的 state 引用
-        // 并在 setup 钩子中初始化它
+        // 注意：这里我们使用 external state management，以便让 HTTP Server 共享同一个 State
+        .manage(app_state.clone()) 
         .setup(move |app| {
-            setup::init(app)?; // 原有的 setup
+            setup::init(app)?; 
 
             // 启动 HTTP Server
-            // 由于 AppState::default() 会读取磁盘，所以即便有两份实例，只要不涉及内存中动态缓存的不一致，是可行的
-            // 账户列表是从磁盘读取的，所以暂时没问题
+            // 传递相同的 app_state 实例给 server
             let handle = app.handle().clone();
             server::init(handle, app_state.clone());
 
             Ok(())
         })
-        .invoke_handler(tauri::generate_handler![
-            collect_account_contents,
-            restore_backup_files,
-            delete_backup,
-            clear_all_backups,
-            // 账户基础命令
-            get_antigravity_accounts,
-            get_account_metrics,
-            trigger_quota_refresh,
-            get_current_antigravity_account_info,
-            save_antigravity_current_account,
-            restore_antigravity_account,
-            switch_to_antigravity_account,
-            clear_all_antigravity_data,
-            is_antigravity_running,
-            sign_in_new_antigravity_account,
-            // 平台支持命令
-            get_platform_info,
-            find_antigravity_installations,
-            get_current_paths,
-            // 数据库路径相关
-            detect_antigravity_installation,
-            // 可执行文件路径相关
-            validate_antigravity_executable,
-            detect_antigravity_executable,
-            save_antigravity_executable,
-            minimize_to_tray,
-            restore_from_tray,
-            update_tray_menu_command,
-            save_system_tray_state,
-            save_silent_start_state,
-            save_private_mode_state,
-            save_debug_mode_state,
-            get_all_settings,
-            get_language,
-            set_language,
-            // 数据库监控命令
-            is_database_monitoring_running,
-            start_database_monitoring,
-            stop_database_monitoring,
-            decrypt_config_data,
-            encrypt_config_data,
-            write_text_file,
-            write_frontend_log,
-            commands::open_log_directory,
-            commands::get_log_directory_path,
-            commands::launch_and_install_extension,
-        ])
+        .invoke_handler(tauri::generate_handler![])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
 }
