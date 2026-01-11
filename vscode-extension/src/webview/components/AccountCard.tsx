@@ -21,7 +21,7 @@ interface Account {
         email: string;
         plan_name: string;
         plan?: {
-            slug: string;
+            tier_id: string;
         };
     };
 }
@@ -59,7 +59,7 @@ export const AccountCard: React.FC<AccountCardProps> = ({ account, data, isCurre
                             {t('common:status.current')}
                         </VSCodeTag>
                     )}
-                    <VSCodeTag>{account.context.plan?.slug || t('common:status.unknown')}</VSCodeTag>
+                    <VSCodeTag>{account.context.plan?.tier_id || t('common:status.unknown')}</VSCodeTag>
                     {!isCurrent && (
                         <VSCodeButton
                             appearance="secondary"

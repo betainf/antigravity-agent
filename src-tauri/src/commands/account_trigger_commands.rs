@@ -2,10 +2,10 @@ use base64::Engine;
 use prost::Message;
 use reqwest::header::{AUTHORIZATION, CONTENT_TYPE, USER_AGENT};
 use serde::{Deserialize, Serialize};
-use tracing::{info, error, instrument};
 use serde_json::Value;
 use std::fs;
 use tauri::State;
+use tracing::{error, info, instrument};
 
 // --- Data Structures ---
 
@@ -33,7 +33,6 @@ pub async fn trigger_quota_refresh(
     state: State<'_, crate::AppState>,
     email: String,
 ) -> Result<TriggerResult, String> {
-    
     match run_trigger_logic(&state.config_dir, &email).await {
         Ok(result) => Ok(result),
         Err(e) => {
@@ -57,7 +56,10 @@ pub async fn run_trigger_logic(
     let project = match fetch_code_assist_project(&access_token).await {
         Ok(p) => p,
         Err(e) => {
-            info!("Skipping account {}: No project ID found (Reason: {})", email, e);
+            info!(
+                "Skipping account {}: No project ID found (Reason: {})",
+                email, e
+            );
             return Ok(TriggerResult {
                 email: email_str,
                 triggered_models: Vec::new(),
@@ -84,8 +86,12 @@ pub async fn run_trigger_logic(
         // Only trigger if quota is effectively full (> 99.99%)
         // The user said "model with 100% remaining"
         if item.percentage > 0.9999 {
-            info!("Model {} has full quota ({}%), triggering...", item.model_key, item.percentage * 100.0);
-            
+            info!(
+                "Model {} has full quota ({}%), triggering...",
+                item.model_key,
+                item.percentage * 100.0
+            );
+
             match trigger_minimal_query(&access_token, &project, &item.model_key).await {
                 Ok(_) => triggered.push(item.display_name),
                 Err(e) => {
@@ -135,22 +141,29 @@ fn parse_quotas(models_json: &Value) -> Vec<ModelQuotaStatus> {
 
         for (key, name) in targets {
             if let Some(model_data) = map.get(key) {
-                 if let Some(quota_info) = model_data.get("quotaInfo") {
-                     let percentage = quota_info.get("remainingFraction").and_then(|v| v.as_f64()).unwrap_or(0.0);
-                     
-                     items.push(ModelQuotaStatus {
-                         model_key: key.to_string(),
-                         display_name: name.to_string(),
-                         percentage,
-                     });
-                 }
+                if let Some(quota_info) = model_data.get("quotaInfo") {
+                    let percentage = quota_info
+                        .get("remainingFraction")
+                        .and_then(|v| v.as_f64())
+                        .unwrap_or(0.0);
+
+                    items.push(ModelQuotaStatus {
+                        model_key: key.to_string(),
+                        display_name: name.to_string(),
+                        percentage,
+                    });
+                }
             }
         }
     }
     items
 }
 
-async fn trigger_minimal_query(access_token: &str, project: &str, model_key: &str) -> Result<(), String> {
+async fn trigger_minimal_query(
+    access_token: &str,
+    project: &str,
+    model_key: &str,
+) -> Result<(), String> {
     let client = reqwest::Client::builder()
         .timeout(std::time::Duration::from_secs(10))
         .build()
@@ -179,7 +192,7 @@ async fn trigger_minimal_query(access_token: &str, project: &str, model_key: &st
         .post(&url)
         .header(AUTHORIZATION, format!("Bearer {}", access_token))
         .header(CONTENT_TYPE, "application/json")
-        .header(USER_AGENT, "antigravity/windows/amd64") 
+        .header(USER_AGENT, "antigravity/windows/amd64")
         .json(&body)
         .send()
         .await
@@ -195,7 +208,6 @@ async fn trigger_minimal_query(access_token: &str, project: &str, model_key: &st
     info!("Trigger Success for {}: Status={}", model_key, status);
     Ok(())
 }
-
 
 // --- Shared API Helpers ---
 
@@ -216,11 +228,14 @@ async fn load_account(
     // More robust json parsing could be used, but reusing logic from metrics command
     let json: Value = serde_json::from_str(&content).map_err(|e| e.to_string())?;
 
-    if let Some(state_str) = json.get("jetskiStateSync.agentManagerInitState").and_then(|v| v.as_str()) {
+    if let Some(state_str) = json
+        .get("jetskiStateSync.agentManagerInitState")
+        .and_then(|v| v.as_str())
+    {
         let bytes = base64::engine::general_purpose::STANDARD
             .decode(state_str.trim())
             .map_err(|e| e.to_string())?;
-        
+
         return Ok((target_email.to_string(), bytes));
     }
 
@@ -230,20 +245,21 @@ async fn load_account(
 async fn get_valid_token(email: &str, proto_bytes: &[u8]) -> Result<(String, String), String> {
     let mut msg = crate::proto::SessionResponse::decode(proto_bytes)
         .map_err(|e| format!("Proto decode failed: {}", e))?;
-    
+
     let auth = msg.auth.as_mut().ok_or("No auth info")?;
     let access_token = auth.access_token.clone();
-    let refresh_token = auth.id_token.clone(); 
-    let user_id = msg.user_id_raw.clone(); // Or extract from context
+    let refresh_token = auth.refresh_token.clone();
+    // 从 context.email 获取用户 ID
+    let user_id = msg.context.as_ref().map(|c| c.email.clone()).unwrap_or_default();
 
     // Check validity by making a quick userinfo call to verify the token works
     if check_token_validity(&access_token).await {
-         return Ok((access_token, String::from_utf8_lossy(&user_id).to_string()));
+        return Ok((access_token, user_id));
     }
 
     info!("Token expired for {}, refreshing...", email);
     let new_token = refresh_access_token(&refresh_token).await?;
-    Ok((new_token, String::from_utf8_lossy(&user_id).to_string()))
+    Ok((new_token, user_id))
 }
 
 async fn check_token_validity(access_token: &str) -> bool {
@@ -254,7 +270,7 @@ async fn check_token_validity(access_token: &str) -> bool {
         .header(AUTHORIZATION, format!("Bearer {}", access_token))
         .send()
         .await;
-    
+
     match res {
         Ok(r) => r.status().is_success(),
         Err(_) => false,
@@ -264,7 +280,10 @@ async fn check_token_validity(access_token: &str) -> bool {
 async fn refresh_access_token(refresh_token: &str) -> Result<String, String> {
     let client = reqwest::Client::new();
     let params = [
-        ("client_id", "1071006060591-tmhssin2h21lcre235vtolojh4g403ep.apps.googleusercontent.com"),
+        (
+            "client_id",
+            "1071006060591-tmhssin2h21lcre235vtolojh4g403ep.apps.googleusercontent.com",
+        ),
         ("client_secret", "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"),
         ("grant_type", "refresh_token"),
         ("refresh_token", refresh_token),
@@ -305,22 +324,26 @@ async fn fetch_code_assist_project(access_token: &str) -> Result<String, String>
     let text = res.text().await.map_err(|e| e.to_string())?;
 
     if !status.is_success() {
-         return Err(format!("loadCodeAssist failed status {}: {}", status, text));
+        return Err(format!("loadCodeAssist failed status {}: {}", status, text));
     }
 
     let json: Value = serde_json::from_str(&text).map_err(|e| {
-        format!("Failed to parse project response: {} | Raw Body: {:.100}", e, text)
+        format!(
+            "Failed to parse project response: {} | Raw Body: {:.100}",
+            e, text
+        )
     })?;
 
     // Try to find project ID in various possible fields
-    let project_id = json.get("cloudaicompanionProject")
+    let project_id = json
+        .get("cloudaicompanionProject")
         .or_else(|| json.get("project"))
         .or_else(|| json.get("projectId"))
         .and_then(|v| v.as_str());
 
     match project_id {
         Some(id) => Ok(id.to_string()),
-        None => Err("Project ID missing in loadCodeAssist response".to_string())
+        None => Err("Project ID missing in loadCodeAssist response".to_string()),
     }
 }
 
@@ -333,7 +356,10 @@ async fn fetch_available_models(access_token: &str, project: &str) -> Result<Val
     let body = serde_json::json!({ "project": project });
 
     let res = client
-        .post(format!("{}/v1internal:fetchAvailableModels", CLOUD_CODE_BASE_URL))
+        .post(format!(
+            "{}/v1internal:fetchAvailableModels",
+            CLOUD_CODE_BASE_URL
+        ))
         .header(AUTHORIZATION, format!("Bearer {}", access_token))
         .header(CONTENT_TYPE, "application/json")
         .header(USER_AGENT, "antigravity/windows/amd64")
@@ -346,11 +372,20 @@ async fn fetch_available_models(access_token: &str, project: &str) -> Result<Val
     let text = res.text().await.map_err(|e| e.to_string())?;
 
     if !status.is_success() {
-         return Err(format!("fetchAvailableModels failed status {}: {}", status, text));
+        return Err(format!(
+            "fetchAvailableModels failed status {}: {}",
+            status, text
+        ));
     }
 
     serde_json::from_str(&text).map_err(|e| {
-        error!("JSON parse failed for fetchAvailableModels. Raw body: {}", text);
-        format!("Failed to parse models JSON: {} | Raw Body: {:.500}", e, text)
+        error!(
+            "JSON parse failed for fetchAvailableModels. Raw body: {}",
+            text
+        );
+        format!(
+            "Failed to parse models JSON: {} | Raw Body: {:.500}",
+            e, text
+        )
     })
 }

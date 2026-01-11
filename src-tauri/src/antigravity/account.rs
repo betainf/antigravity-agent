@@ -30,8 +30,6 @@ pub fn decode_jetski_state_proto(b64: &str) -> Result<Value, String> {
 }
 
 fn session_response_to_json(msg: &crate::proto::SessionResponse) -> Value {
-    use crate::proto::*;
-
     let b64 = |data: &Vec<u8>| {
         if data.is_empty() {
             None
@@ -40,70 +38,67 @@ fn session_response_to_json(msg: &crate::proto::SessionResponse) -> Value {
         }
     };
 
-    let history = msg.history.as_ref().map(|h| {
-        Value::Array(
-            h.items
-                .iter()
-                .map(|entry| {
-                    serde_json::json!({
-                        "session_id": entry.session_id,
-                        "detail_raw_base64": b64(&entry.detail_raw),
-                    })
-                })
-                .collect(),
-        )
-    });
-
+    // 认证信息
     let auth = msg.auth.as_ref().map(|a| {
         serde_json::json!({
             "access_token": a.access_token,
-            "type": a.r#type,
-            "id_token": a.id_token,
-            "meta": a.meta.as_ref().map(|m| serde_json::json!({
-                "expiry_timestamp": m.expiry_timestamp
-            }))
+            "token_type": a.token_type,
+            "refresh_token": a.refresh_token,
+            "created_at": a.created_at.as_ref().map(|t| t.seconds),
         })
     });
 
-    let model_item = |item: &ModelItem| {
-        serde_json::json!({
-            "name": item.name,
-            "unknown_f2_base64": b64(&item.unknown_f2),
-            "unknown_f5": item.unknown_f5,
-            "unknown_f11": item.unknown_f11,
-            "unknown_f15_base64": b64(&item.unknown_f15),
-        })
-    };
-
+    // 模型配置
     let models = msg
         .context
         .as_ref()
         .and_then(|ctx| ctx.models.as_ref())
         .map(|m| {
+            let items: Vec<Value> = m
+                .items
+                .iter()
+                .map(|item| {
+                    serde_json::json!({
+                        "name": item.name,
+                        "id": item.id.as_ref().map(|id| id.id),
+                        "field_5": item.field_5,
+                        "field_11": item.field_11,
+                        "tag": item.tag,
+                        "supported_types": item.supported_types.iter().map(|t| &t.mime_type).collect::<Vec<_>>(),
+                    })
+                })
+                .collect();
+
+            let recommended = m.recommended.as_ref().map(|r| {
+                serde_json::json!({
+                    "category": r.category,
+                    "model_names": r.list.as_ref().map(|l| &l.model_names),
+                })
+            });
+
             serde_json::json!({
-                "items": m.items.iter().map(model_item).collect::<Vec<_>>(),
-                "recommended": m.recommended.as_ref().map(|r| serde_json::json!({
-                    "names": r.names,
-                    "unknown_f2_base64": b64(&r.unknown_f2),
-                })),
-                "unknown_f3_base64": b64(&m.unknown_f3),
+                "items": items,
+                "recommended": recommended,
+                "default_model": m.default_model.as_ref().and_then(|d| d.model.as_ref().map(|m| m.id)),
             })
         });
 
+    // 订阅计划 (from context.plan)
     let plan = msg
         .context
         .as_ref()
         .and_then(|ctx| ctx.plan.as_ref())
         .map(|p| {
             serde_json::json!({
-                "slug": p.slug,
-                "name": p.name,
-                "description": p.description,
+                "tier_id": p.tier_id,
+                "tier_name": p.tier_name,
+                "display_name": p.display_name,
                 "upgrade_url": p.upgrade_url,
-                "upgrade_msg": p.upgrade_msg,
+                "upgrade_message": p.upgrade_message,
             })
         });
 
+    // 用户上下文
     let context = msg.context.as_ref().map(|ctx| {
         serde_json::json!({
             "status": ctx.status,
@@ -114,15 +109,29 @@ fn session_response_to_json(msg: &crate::proto::SessionResponse) -> Value {
         })
     });
 
+    // 顶层订阅信息
+    let subscription = msg.subscription.as_ref().map(|s| {
+        serde_json::json!({
+            "tier_id": s.tier_id,
+            "tier_name": s.tier_name,
+            "display_name": s.display_name,
+            "upgrade_url": s.upgrade_url,
+            "upgrade_message": s.upgrade_message,
+        })
+    });
+
     serde_json::json!({
-        "history": history,
-        "flags_f5_base64": b64(&msg.flags_f5),
+        "field_5_base64": b64(&msg.field_5),
         "auth": auth,
-        "f7_base64": b64(&msg.f7),
-        "f9_base64": b64(&msg.f9),
-        "f11_base64": b64(&msg.f11),
-        "user_id_raw_base64": b64(&msg.user_id_raw),
+        "field_7_base64": b64(&msg.field_7),
+        "field_9_base64": b64(&msg.field_9),
+        "field_10_base64": b64(&msg.field_10),
+        "field_11_base64": b64(&msg.field_11),
+        "field_15_base64": b64(&msg.field_15),
+        "field_16_base64": b64(&msg.field_16),
+        "field_17_base64": b64(&msg.field_17),
         "f18_base64": b64(&msg.f18),
         "context": context,
+        "subscription": subscription,
     })
 }

@@ -3,6 +3,7 @@ import { AntigravityPanel } from './managers/antigravity-panel';
 import { Logger } from './utils/logger';
 import { StatusBarManager } from './managers/status-bar-manager';
 import { AutoAcceptManager } from './managers/auto-accept-manager';
+import { initializeWebSocket } from './services/websocket-client';
 
 
 export let statusBarItem: vscode.StatusBarItem;
@@ -46,6 +47,9 @@ export async function activate(context: vscode.ExtensionContext) {
     StatusBarManager.registerAnalyticsInterceptor(context);
 
     AutoAcceptManager.initialize(context);
+
+    // Initialize WebSocket for bidirectional communication with Tauri backend
+    initializeWebSocket(context);
 
     context.subscriptions.push(statusBarItem);
 }

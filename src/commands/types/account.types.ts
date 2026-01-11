@@ -3,59 +3,60 @@
 export interface AntigravityAccount {
   auth: Auth
   context: Context
-  f11_base64: string
-  f18_base64: string
-  f7_base64: any
-  f9_base64: string
-  flags_f5_base64: string
-  history: any[]
-  user_id_raw_base64: string
+  field_5_base64: string | null
+  field_7_base64: string | null
+  field_9_base64: string | null
+  field_10_base64: string | null
+  field_11_base64: string | null
+  field_15_base64: string | null
+  field_16_base64: string | null
+  field_17_base64: string | null
+  f18_base64: string | null
+  subscription: Subscription | null
 }
 
 interface Auth {
   access_token: string
-  id_token: string
-  meta: Meta
-  type: string
-}
-
-interface Meta {
-  expiry_timestamp: number
+  token_type: string       // 原 type
+  refresh_token: string    // 原 id_token
+  created_at: number | null  // 原 meta.expiry_timestamp
 }
 
 interface Context {
   email: string
-  models: Models
-  plan: Plan
+  models: Models | null
+  plan: Subscription | null  // 使用 Subscription 类型
   plan_name: string
   status: number
 }
 
 interface Models {
   items: Item[]
-  recommended: Recommended
-  unknown_f3_base64: string
+  recommended: Recommended | null
+  default_model: number | null
 }
 
 interface Item {
   name: string
-  unknown_f11: number
-  unknown_f15_base64: string
-  unknown_f2_base64: string
-  unknown_f5: number
+  id: number | null
+  field_5: number
+  field_11: number
+  tag: string
+  supported_types: string[]
 }
 
 interface Recommended {
-  names: string[]
-  unknown_f2_base64: string
+  category: string
+  model_names: string[] | null
 }
 
-interface Plan {
-  description: string
-  name: string
-  slug: string
-  upgrade_msg: string
+// 订阅信息
+interface Subscription {
+  tier_id: string
+  tier_name: string
+  display_name: string
   upgrade_url: string
+  upgrade_message: string
 }
 
 // 对应 Rust 的 AccountMetrics 结构

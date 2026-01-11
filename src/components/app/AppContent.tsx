@@ -12,6 +12,7 @@ import AccountsListToolbar, { type ListToolbarValue } from "@/components/busines
 import { logger } from "@/lib/logger.ts";
 import { useTranslation } from 'react-i18next';
 import dayjs from "dayjs";
+import { useInstallExtension } from "@/hooks/use-install-extension.tsx";
 
 const tierRank: Record<UserTier, number> = {
   'g1-ultra-tier': 0,
@@ -26,6 +27,9 @@ export function AppContent() {
   const { t } = useTranslation(['account', 'notifications']);
   const [isUserDetailOpen, setIsUserDetailOpen] = useState(false);
   const [selectedUser, setSelectedUser] = useState<AccountSessionListAccountItem | null>(null);
+
+  const { install } = useInstallExtension();
+
   // Use selectors to prevent infinite render loops
   const accounts = useAntigravityAccount((state) => state.accounts);
   const getAccounts = useAntigravityAccount((state) => state.getAccounts);
@@ -126,6 +130,35 @@ export function AppContent() {
     try {
       appGlobalLoader.open({ label: t('account:switch.loading', { email: maskEmail(user.email) }) });
       await switchToAccount(user.email);
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : String(error);
+
+      // 检查是否是需要安装扩展的错误 (后端返回的错误信息包含这些关键词)
+      if (errorMessage.includes("VSCode") || errorMessage.includes("安装")) {
+        Modal.warning({
+          title: '需要安装 VSCode 扩展',
+          width: 500,
+          centered: true,
+          content: (
+            <div className="flex flex-col gap-2 pt-2">
+              <p className="whitespace-pre-line text-gray-600">
+                {errorMessage}
+              </p>
+              <div className="mt-2 text-sm bg-gray-50 p-3 rounded border border-gray-100">
+                <p className="font-semibold mb-1">为什么需要扩展？</p>
+                <p className="text-gray-500">Antigravity 正在运行中，为了不丢失当前状态，我们通过 VSCode 扩展来优雅地重载窗口，而不是强制重启进程。</p>
+              </div>
+            </div>
+          ),
+          okText: '好的，我去安装',
+          onOk: () => {
+            // 触发安装扩展逻辑
+            install();
+          }
+        });
+      } else {
+        toast.error(t('account:switch.error', { error: errorMessage }));
+      }
     } finally {
       appGlobalLoader.close();
     }
@@ -178,7 +211,7 @@ export function AppContent() {
       userAvatar: accountAdditionDatum?.userAvatar ?? "",
       apiKey: account.auth.access_token,
       // 似乎在某些情况下 plan 可能为 null，这里添加 null 检查
-      tier: (account.context.plan?.slug ?? '') as UserTier,
+      tier: (account.context.plan?.tier_id ?? '') as UserTier,
     }
   })
 

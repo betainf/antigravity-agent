@@ -3,11 +3,11 @@
 //! 使用 Tauri 2.9 内置的 tray API 实现后端控制托盘
 
 use crate::app_settings::AppSettingsManager;
+use serde::Deserialize;
+use std::time::{SystemTime, UNIX_EPOCH};
 use tauri::menu::{Menu, MenuBuilder, MenuItem};
 use tauri::tray::{TrayIcon, TrayIconBuilder};
 use tauri::{AppHandle, Emitter, Manager};
-use serde::Deserialize;
-use std::time::{SystemTime, UNIX_EPOCH};
 
 #[derive(Debug, Deserialize, Clone)]
 pub struct TrayMenuLabels {
@@ -101,7 +101,11 @@ fn handle_tray_menu_event(app: &AppHandle, event: tauri::menu::MenuEvent) {
 }
 
 /// 更新托盘菜单（添加账户列表）
-pub fn update_tray_menu(app: &AppHandle, accounts: Vec<String>, labels: Option<TrayMenuLabels>) -> Result<(), String> {
+pub fn update_tray_menu(
+    app: &AppHandle,
+    accounts: Vec<String>,
+    labels: Option<TrayMenuLabels>,
+) -> Result<(), String> {
     // 检查托盘是否应该启用
     let settings_manager = app.state::<AppSettingsManager>();
     let settings = settings_manager.get_settings();
@@ -129,8 +133,14 @@ pub fn update_tray_menu(app: &AppHandle, accounts: Vec<String>, labels: Option<T
 
     // 显示主窗口
     menu_builder = menu_builder.item(
-        &MenuItem::with_id(app, format!("show_main#{}", nonce), &menu_labels.show_main, true, None::<&str>)
-            .map_err(|e| format!("创建显示主窗口菜单失败: {e}"))?,
+        &MenuItem::with_id(
+            app,
+            format!("show_main#{}", nonce),
+            &menu_labels.show_main,
+            true,
+            None::<&str>,
+        )
+        .map_err(|e| format!("创建显示主窗口菜单失败: {e}"))?,
     );
 
     // 添加账户列表
@@ -154,8 +164,14 @@ pub fn update_tray_menu(app: &AppHandle, accounts: Vec<String>, labels: Option<T
 
     // 退出应用
     menu_builder = menu_builder.separator().item(
-        &MenuItem::with_id(app, format!("quit#{}", nonce), &menu_labels.quit, true, None::<&str>)
-            .map_err(|e| format!("创建退出菜单失败: {e}"))?,
+        &MenuItem::with_id(
+            app,
+            format!("quit#{}", nonce),
+            &menu_labels.quit,
+            true,
+            None::<&str>,
+        )
+        .map_err(|e| format!("创建退出菜单失败: {e}"))?,
     );
 
     // 构建并设置新菜单

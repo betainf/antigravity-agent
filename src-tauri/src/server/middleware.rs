@@ -1,8 +1,8 @@
 use std::future::{ready, Ready};
 // use std::pin::Pin; // Unused
+use std::pin::Pin;
 use std::rc::Rc;
-use std::task::{Context, Poll};
-use std::pin::Pin; // Re-add Pin which is needed for the type annotation
+use std::task::{Context, Poll}; // Re-add Pin which is needed for the type annotation
 
 use actix_web::{
     dev::{self, Service, ServiceRequest, ServiceResponse, Transform},
@@ -78,20 +78,27 @@ where
                         transform_keys(&mut json);
 
                         // Serialize back
-                        let new_body = serde_json::to_vec(&json).map_err(actix_web::error::ErrorInternalServerError)?;
+                        let new_body = serde_json::to_vec(&json)
+                            .map_err(actix_web::error::ErrorInternalServerError)?;
                         let new_bytes = Bytes::from(new_body);
 
                         // Construct new payload with explicit cast
                         let stream = once(ready(Ok::<_, PayloadError>(new_bytes)));
-                        let boxed_stream: Pin<Box<dyn Stream<Item = Result<Bytes, PayloadError>>>> = Box::pin(stream);
-                        let payload = dev::Payload::Stream { payload: boxed_stream };
+                        let boxed_stream: Pin<Box<dyn Stream<Item = Result<Bytes, PayloadError>>>> =
+                            Box::pin(stream);
+                        let payload = dev::Payload::Stream {
+                            payload: boxed_stream,
+                        };
                         req.set_payload(payload);
                     } else {
-                         // Reset original payload
-                         let stream = once(ready(Ok::<_, PayloadError>(body)));
-                         let boxed_stream: Pin<Box<dyn Stream<Item = Result<Bytes, PayloadError>>>> = Box::pin(stream);
-                         let payload = dev::Payload::Stream { payload: boxed_stream };
-                         req.set_payload(payload);
+                        // Reset original payload
+                        let stream = once(ready(Ok::<_, PayloadError>(body)));
+                        let boxed_stream: Pin<Box<dyn Stream<Item = Result<Bytes, PayloadError>>>> =
+                            Box::pin(stream);
+                        let payload = dev::Payload::Stream {
+                            payload: boxed_stream,
+                        };
+                        req.set_payload(payload);
                     }
                 }
             }

@@ -1,9 +1,9 @@
+use serde_json::{self, Value};
 /// 目录获取模块
 /// 统一管理所有配置和数据目录路径
 use std::fs;
 use std::io;
 use std::path::PathBuf;
-use serde_json::{self, Value};
 use tracing::{info, warn};
 
 /// 获取应用主配置目录

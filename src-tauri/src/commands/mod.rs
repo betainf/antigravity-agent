@@ -35,12 +35,12 @@ pub mod extension_commands;
 // 重新导出所有命令，保持与 main.rs 的兼容性
 pub use account_commands::*;
 pub use account_manage_commands::*;
-pub use db_monitor_commands::*;
 pub use account_metrics_commands::*;
 pub use account_trigger_commands::*;
+pub use db_monitor_commands::*;
+pub use extension_commands::*;
 pub use logging_commands::*;
 pub use platform_commands::*;
 pub use process_commands::*;
 pub use settings_commands::*;
 pub use tray_commands::*;
-pub use extension_commands::*;

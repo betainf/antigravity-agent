@@ -2,11 +2,10 @@ use base64::Engine;
 use prost::Message;
 use reqwest::header::{AUTHORIZATION, CONTENT_TYPE, USER_AGENT};
 use serde::{Deserialize, Serialize};
-use serde_json::{json, Value};
+use serde_json::Value;
 use std::fs;
 use tauri::State;
-use tracing::{info, error, instrument};
-use std::collections::HashMap;
+use tracing::{info, instrument};
 
 // --- Data Structures ---
 
@@ -78,20 +77,23 @@ async fn load_account(
     let content = fs::read_to_string(&path).map_err(|e| e.to_string())?;
     let json: Value = serde_json::from_str(&content).map_err(|e| e.to_string())?;
 
-    if let Some(state_str) = json.get("jetskiStateSync.agentManagerInitState").and_then(|v| v.as_str()) {
+    if let Some(state_str) = json
+        .get("jetskiStateSync.agentManagerInitState")
+        .and_then(|v| v.as_str())
+    {
         let bytes = base64::engine::general_purpose::STANDARD
             .decode(state_str.trim())
             .map_err(|e| e.to_string())?;
 
         // Optional: verify email inside proto matches filename?
-        // For performance we can skip full decode if we trust filename, 
+        // For performance we can skip full decode if we trust filename,
         // but let's decode to be safe and consistent with previous logic.
-        let msg = crate::proto::SessionResponse::decode(bytes.as_slice())
-            .map_err(|e| e.to_string())?;
-        
+        let msg =
+            crate::proto::SessionResponse::decode(bytes.as_slice()).map_err(|e| e.to_string())?;
+
         if let Some(context) = &msg.context {
             if context.email == target_email {
-                 return Ok((target_email.to_string(), bytes));
+                return Ok((target_email.to_string(), bytes));
             }
         }
         return Err("账户文件内容不匹配".to_string());
@@ -104,10 +106,10 @@ async fn process_account(email: String, proto_bytes: Vec<u8>) -> Result<AccountM
     // 1. Decode Proto to get tokens
     let mut msg = crate::proto::SessionResponse::decode(proto_bytes.as_slice())
         .map_err(|e| format!("Proto decode failed: {}", e))?;
-    
+
     let auth = msg.auth.as_mut().ok_or("No auth info")?;
     let mut access_token = auth.access_token.clone();
-    let refresh_token = auth.id_token.clone(); // Mapped as per observation
+    let refresh_token = auth.refresh_token.clone(); // Mapped as per observation
 
     // 2. Fetch User Info (Test Token)
     let user_info = match fetch_user_info(&access_token).await {
@@ -120,7 +122,9 @@ async fn process_account(email: String, proto_bytes: Vec<u8>) -> Result<AccountM
             access_token = new_token.clone();
             // Update Proto struct
             auth.access_token = new_token;
-            fetch_user_info(&access_token).await.map_err(|e| format!("Retry fetch user info failed: {}", e))?
+            fetch_user_info(&access_token)
+                .await
+                .map_err(|e| format!("Retry fetch user info failed: {}", e))?
         }
     };
 
@@ -163,13 +167,18 @@ async fn fetch_user_info(access_token: &str) -> Result<UserInfoResponse, String>
         return Err(format!("Status: {}", res.status()));
     }
 
-    res.json::<UserInfoResponse>().await.map_err(|e| e.to_string())
+    res.json::<UserInfoResponse>()
+        .await
+        .map_err(|e| e.to_string())
 }
 
 async fn refresh_access_token(refresh_token: &str) -> Result<String, String> {
     let client = reqwest::Client::new();
     let params = [
-        ("client_id", "1071006060591-tmhssin2h21lcre235vtolojh4g403ep.apps.googleusercontent.com"),
+        (
+            "client_id",
+            "1071006060591-tmhssin2h21lcre235vtolojh4g403ep.apps.googleusercontent.com",
+        ),
         ("client_secret", "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"),
         ("grant_type", "refresh_token"),
         ("refresh_token", refresh_token),
@@ -210,22 +219,26 @@ async fn fetch_code_assist_project(access_token: &str) -> Result<String, String>
     let text = res.text().await.map_err(|e| e.to_string())?;
 
     if !status.is_success() {
-         return Err(format!("loadCodeAssist failed status {}: {}", status, text));
+        return Err(format!("loadCodeAssist failed status {}: {}", status, text));
     }
 
     let json: Value = serde_json::from_str(&text).map_err(|e| {
-        format!("Failed to parse project response (Metrics): {} | Raw Body: {:.100}", e, text)
+        format!(
+            "Failed to parse project response (Metrics): {} | Raw Body: {:.100}",
+            e, text
+        )
     })?;
 
     // Try to find project ID in various possible fields
-    let project_id = json.get("cloudaicompanionProject")
+    let project_id = json
+        .get("cloudaicompanionProject")
         .or_else(|| json.get("project"))
         .or_else(|| json.get("projectId"))
         .and_then(|v| v.as_str());
 
     match project_id {
         Some(id) => Ok(id.to_string()),
-        None => Err("Project ID missing in loadCodeAssist response (Metrics)".to_string())
+        None => Err("Project ID missing in loadCodeAssist response (Metrics)".to_string()),
     }
 }
 
@@ -238,7 +251,10 @@ async fn fetch_available_models(access_token: &str, project: &str) -> Result<Val
     let body = serde_json::json!({ "project": project });
 
     let res = client
-        .post(format!("{}/v1internal:fetchAvailableModels", CLOUD_CODE_BASE_URL))
+        .post(format!(
+            "{}/v1internal:fetchAvailableModels",
+            CLOUD_CODE_BASE_URL
+        ))
         .header(AUTHORIZATION, format!("Bearer {}", access_token))
         .header(CONTENT_TYPE, "application/json")
         .header(USER_AGENT, "antigravity/windows/amd64")
@@ -266,16 +282,23 @@ fn parse_quotas(models_json: &Value) -> Vec<QuotaItem> {
 
         for (key, name) in targets {
             if let Some(model_data) = map.get(key) {
-                 if let Some(quota_info) = model_data.get("quotaInfo") {
-                     let percentage = quota_info.get("remainingFraction").and_then(|v| v.as_f64()).unwrap_or(0.0);
-                     let reset_text = quota_info.get("resetTime").and_then(|v| v.as_str()).unwrap_or("").to_string();
-                     
-                     items.push(QuotaItem {
-                         model_name: name.to_string(),
-                         percentage,
-                         reset_text,
-                     });
-                 }
+                if let Some(quota_info) = model_data.get("quotaInfo") {
+                    let percentage = quota_info
+                        .get("remainingFraction")
+                        .and_then(|v| v.as_f64())
+                        .unwrap_or(0.0);
+                    let reset_text = quota_info
+                        .get("resetTime")
+                        .and_then(|v| v.as_str())
+                        .unwrap_or("")
+                        .to_string();
+
+                    items.push(QuotaItem {
+                        model_name: name.to_string(),
+                        percentage,
+                        reset_text,
+                    });
+                }
             }
         }
     }

@@ -1,10 +1,10 @@
 use crate::platform::antigravity::find_antigravity_installations;
+use futures_util::StreamExt;
 use reqwest::Client;
 use std::io::Write;
 use std::process::Command;
 use tauri::command;
 use tempfile::Builder;
-use futures_util::StreamExt;
 
 /// 下载 VSIX 文件并调用 Antigravity 安装，最后启动编辑器
 #[command]
@@ -13,7 +13,11 @@ pub async fn launch_and_install_extension(url: String) -> Result<String, String>
 
     // 1. 下载 VSIX 到临时文件
     let client = Client::new();
-    let res = client.get(&url).send().await.map_err(|e| format!("请求失败: {}", e))?;
+    let res = client
+        .get(&url)
+        .send()
+        .await
+        .map_err(|e| format!("请求失败: {}", e))?;
 
     if !res.status().is_success() {
         return Err(format!("下载失败，状态码: {}", res.status()));
@@ -28,7 +32,9 @@ pub async fn launch_and_install_extension(url: String) -> Result<String, String>
     let mut stream = res.bytes_stream();
     while let Some(item) = stream.next().await {
         let chunk = item.map_err(|e| format!("读取流失败: {}", e))?;
-        temp_file.write_all(&chunk).map_err(|e| format!("写入失败: {}", e))?;
+        temp_file
+            .write_all(&chunk)
+            .map_err(|e| format!("写入失败: {}", e))?;
     }
 
     let temp_path = temp_file.path().to_path_buf();
@@ -43,9 +49,9 @@ pub async fn launch_and_install_extension(url: String) -> Result<String, String>
     // 这里我们简单起见，尝试使用第一个找到的路径
     // 注意：find_antigravity_installations 返回的是目录，我们需要找到目录下的可执行文件
     // 常规 Antigravity 目录结构中，可执行文件通常叫 Antigravity.exe (Windows) 或 Antigravity (Linux/macOS)
-    
+
     let mut exe_path = None;
-    
+
     for dir in &installations {
         // Windows
         // 1. 优先尝试 bin/antigravity.cmd (CLI wrapper, 能看到输出)
@@ -60,7 +66,7 @@ pub async fn launch_and_install_extension(url: String) -> Result<String, String>
             exe_path = Some(win_exe);
             break;
         }
-        
+
         // Linux / macOS
         // 1. 优先尝试 bin/antigravity
         let bin_exe = dir.join("bin").join("antigravity");
@@ -70,29 +76,38 @@ pub async fn launch_and_install_extension(url: String) -> Result<String, String>
         }
         // 2. macOS .app Bundle 特殊处理
         if dir.extension().map_or(false, |ext| ext == "app") {
-             let mac_cli = dir.join("Contents").join("Resources").join("app").join("bin").join("antigravity");
-             if mac_cli.exists() {
-                 exe_path = Some(mac_cli);
-                 break;
-             }
+            let mac_cli = dir
+                .join("Contents")
+                .join("Resources")
+                .join("app")
+                .join("bin")
+                .join("antigravity");
+            if mac_cli.exists() {
+                exe_path = Some(mac_cli);
+                break;
+            }
         }
     }
-    
+
     // 如果还没找到，尝试硬编码查找 Windows 默认安装位置 (Programs 目录)
     if exe_path.is_none() {
         if let Some(local_app_data) = dirs::data_local_dir() {
-             let prog_path = local_app_data.join("Programs").join("Antigravity").join("bin").join("antigravity.cmd");
-             if prog_path.exists() {
-                 tracing::info!("Found in Local/Programs: {:?}", prog_path);
-                 exe_path = Some(prog_path);
-             }
+            let prog_path = local_app_data
+                .join("Programs")
+                .join("Antigravity")
+                .join("bin")
+                .join("antigravity.cmd");
+            if prog_path.exists() {
+                tracing::info!("Found in Local/Programs: {:?}", prog_path);
+                exe_path = Some(prog_path);
+            }
         }
     }
 
     // 如果上述逻辑通过 find_antigravity_installations 找不到（因为它可能只返回数据目录而非程序目录），
     // 我们需要一个更能定位可执行文件的逻辑。
     // 在 starter.rs 中有一个 detect_antigravity_executable()，那是更好的选择。
-    
+
     let target_exe = if let Some(path) = exe_path {
         path
     } else {
@@ -107,8 +122,12 @@ pub async fn launch_and_install_extension(url: String) -> Result<String, String>
 
     // 3. 执行安装命令
     // antigravity --install-extension <path> --force
-    tracing::info!("Command: {:?} --install-extension {:?} --force", target_exe, temp_path);
-    
+    tracing::info!(
+        "Command: {:?} --install-extension {:?} --force",
+        target_exe,
+        temp_path
+    );
+
     let install_output = Command::new(&target_exe)
         .arg("--install-extension")
         .arg(&temp_path)

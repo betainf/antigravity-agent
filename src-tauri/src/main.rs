@@ -43,8 +43,8 @@ fn init_tracing() -> WorkerGuard {
     } else {
         "info,h2=warn,hyper=warn"
     };
-    let env_filter = EnvFilter::try_from_default_env()
-        .unwrap_or_else(|_| EnvFilter::new(default_filter));
+    let env_filter =
+        EnvFilter::try_from_default_env().unwrap_or_else(|_| EnvFilter::new(default_filter));
 
     // 创建日志目录
     let log_dir = crate::directories::get_log_directory();
@@ -120,14 +120,14 @@ fn main() {
         // 鉴于时间，我们这里启动 server，并在 server 中使用独立的 state 引用
         // 并在 setup 钩子中初始化它
         .setup(move |app| {
-            setup::init(app)?;  // 原有的 setup
-            
+            setup::init(app)?; // 原有的 setup
+
             // 启动 HTTP Server
             // 由于 AppState::default() 会读取磁盘，所以即便有两份实例，只要不涉及内存中动态缓存的不一致，是可行的
             // 账户列表是从磁盘读取的，所以暂时没问题
             let handle = app.handle().clone();
             server::init(handle, app_state.clone());
-            
+
             Ok(())
         })
         .invoke_handler(tauri::generate_handler![

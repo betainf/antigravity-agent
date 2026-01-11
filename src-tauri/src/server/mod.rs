@@ -5,6 +5,7 @@ use serde_json::json;
 use std::sync::Arc;
 
 mod middleware;
+pub mod websocket;
 
 // GET /api/is_antigravity_running
 #[get("/api/is_antigravity_running")]
@@ -20,17 +21,17 @@ async fn status() -> impl Responder {
 #[get("/api/get_antigravity_accounts")]
 async fn get_accounts(data: web::Data<Arc<parking_lot::Mutex<AppState>>>) -> impl Responder {
     tracing::debug!("HTTP: Getting accounts");
-    
+
     let config_dir = {
         let state = data.lock();
         state.config_dir.clone()
     };
-    
+
     match crate::commands::account_commands::get_antigravity_accounts_logic(&config_dir).await {
         Ok(accounts) => HttpResponse::Ok().json(accounts),
         Err(e) => {
-             tracing::error!("Failed to get accounts via HTTP: {}", e);
-             HttpResponse::InternalServerError().json(json!({ "error": e }))
+            tracing::error!("Failed to get accounts via HTTP: {}", e);
+            HttpResponse::InternalServerError().json(json!({ "error": e }))
         }
     }
 }
@@ -41,12 +42,12 @@ struct SwitchAccountRequest {
 }
 
 #[post("/api/switch_to_antigravity_account")]
-async fn switch_account(
-    req: web::Json<SwitchAccountRequest>,
-) -> impl Responder {
+async fn switch_account(req: web::Json<SwitchAccountRequest>) -> impl Responder {
     tracing::info!("HTTP Request: Switch to account {}", req.account_name);
 
-    match crate::commands::account_commands::switch_to_antigravity_account(req.account_name.clone()).await {
+    match crate::commands::account_commands::switch_to_antigravity_account(req.account_name.clone())
+        .await
+    {
         Ok(_) => HttpResponse::Ok().json(json!({ "success": true })),
         Err(e) => {
             tracing::error!("Failed to switch account via HTTP: {}", e);
@@ -73,8 +74,13 @@ async fn get_account_metrics_http(
         let state = data.lock();
         state.config_dir.clone()
     };
-    
-    match crate::commands::account_metrics_commands::get_metrics_logic(&config_dir, req.email.clone()).await {
+
+    match crate::commands::account_metrics_commands::get_metrics_logic(
+        &config_dir,
+        req.email.clone(),
+    )
+    .await
+    {
         Ok(metrics) => HttpResponse::Ok().json(metrics),
         Err(e) => {
             tracing::error!("Failed to get metrics via HTTP: {}", e);
@@ -92,17 +98,16 @@ async fn get_current_account_http() -> impl Responder {
     }
 }
 
-
 /// 启动 HTTP 服务器
 pub fn init(app_handle: tauri::AppHandle, state: Arc<parking_lot::Mutex<AppState>>) {
     // Actix-web 需要自己的 system runner，最好不要混用 tauri 的 runtime
     // 我们可以起一个新的 thread 来运行 Actix
     std::thread::spawn(move || {
         let sys = actix_web::rt::System::new();
-        
+
         sys.block_on(async move {
             let server = HttpServer::new(move || {
-                let cors = Cors::permissive(); 
+                let cors = Cors::permissive();
 
                 App::new()
                     .wrap(cors)
@@ -115,6 +120,8 @@ pub fn init(app_handle: tauri::AppHandle, state: Arc<parking_lot::Mutex<AppState
                     .service(switch_account)
                     .service(get_account_metrics_http)
                     .service(get_current_account_http)
+                    // WebSocket 路由
+                    .route("/ws", web::get().to(websocket::ws_handler))
             })
             .bind(("127.0.0.1", 18888));
 

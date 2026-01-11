@@ -29,9 +29,7 @@ export class AutomationEngine {
             result.clicked.push('Run');
         } catch (e) { /* ignore */ }
 
-        if (result.clicked.length > 0) {
-            Logger.log(`🤖 Automation: Triggered [${result.clicked.join(', ')}]`);
-        }
+
 
         return result;
     }
