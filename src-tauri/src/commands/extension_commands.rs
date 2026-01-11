@@ -75,7 +75,7 @@ pub async fn launch_and_install_extension(url: String) -> Result<String, String>
             break;
         }
         // 2. macOS .app Bundle 特殊处理
-        if dir.extension().map_or(false, |ext| ext == "app") {
+        if dir.extension().is_some_and(|ext| ext == "app") {
             let mac_cli = dir
                 .join("Contents")
                 .join("Resources")

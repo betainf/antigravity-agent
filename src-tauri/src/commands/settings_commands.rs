@@ -138,7 +138,7 @@ pub async fn get_language(app: AppHandle) -> Result<String, String> {
 pub async fn set_language(app: AppHandle, language: String) -> Result<(), String> {
     crate::log_async_command!("set_language", async {
         // Validate language code
-        let valid_languages = vec!["en", "zh-CN", "zh-TW"];
+        let valid_languages = ["en", "zh-CN", "zh-TW"];
         if !valid_languages.contains(&language.as_str()) {
             return Err(format!("Unsupported language: {}", language));
         }

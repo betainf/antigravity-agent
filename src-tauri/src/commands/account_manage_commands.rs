@@ -488,7 +488,7 @@ pub async fn sign_in_new_antigravity_account() -> Result<String, String> {
     println!("🗑️ 步骤3: 清除所有 Antigravity 数据 (彻底注销)");
     match crate::antigravity::cleanup::clear_all_antigravity_data().await {
         Ok(result) => {
-            println!("✅ 清除完成: {}", result);
+            tracing::info!("✅ 清除完成: {}", result);
         }
         Err(e) => {
             // 清除失败可能是因为数据库本来就是空的，这是正常情况
@@ -527,4 +527,58 @@ pub async fn sign_in_new_antigravity_account() -> Result<String, String> {
     println!("🎉 所有操作完成: {}", final_message);
 
     Ok(final_message)
+}
+#[cfg(test)]
+mod tests {
+    use super::{decrypt_config_data, encrypt_config_data};
+    use base64::{engine::general_purpose::STANDARD as BASE64, Engine as _};
+
+    fn legacy_encrypt_xor_base64(plaintext: &str, password: &str) -> String {
+        let password_bytes = password.as_bytes();
+        let mut result = Vec::with_capacity(plaintext.len());
+        for (i, byte) in plaintext.as_bytes().iter().enumerate() {
+            let key_byte = password_bytes[i % password_bytes.len()];
+            result.push(byte ^ key_byte);
+        }
+        BASE64.encode(result)
+    }
+
+    #[tokio::test]
+    async fn encrypt_decrypt_roundtrip_v1() {
+        let json = r#"{"a":1,"b":"x","c":[true,false]}"#.to_string();
+        let password = "password123".to_string();
+        let encrypted = encrypt_config_data(json.clone(), password.clone())
+            .await
+            .unwrap();
+        assert!(encrypted.starts_with("AGENC1:"));
+        let decrypted = decrypt_config_data(encrypted, password).await.unwrap();
+        assert_eq!(decrypted, json);
+    }
+
+    #[tokio::test]
+    async fn decrypt_fails_with_wrong_password_v1() {
+        let json = r#"{"k":"v"}"#.to_string();
+        let encrypted = encrypt_config_data(json, "password123".to_string())
+            .await
+            .unwrap();
+        let err = decrypt_config_data(encrypted, "password124".to_string()).await;
+        assert!(err.is_err());
+    }
+
+    #[tokio::test]
+    async fn decrypt_legacy_xor_base64() {
+        let json = r#"{"legacy":true,"n":42}"#;
+        let password = "password123";
+        let encrypted = legacy_encrypt_xor_base64(json, password);
+        let decrypted = decrypt_config_data(encrypted, password.to_string())
+            .await
+            .unwrap();
+        assert_eq!(decrypted, json);
+    }
+
+    #[tokio::test]
+    async fn encrypt_rejects_short_password() {
+        let err = encrypt_config_data("{}".to_string(), "short".to_string()).await;
+        assert!(err.is_err());
+    }
 }

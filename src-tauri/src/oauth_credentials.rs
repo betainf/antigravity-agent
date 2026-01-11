@@ -103,5 +103,8 @@ pub fn resolve_oauth_credentials(config_dir: &Path) -> Result<(String, String), 
         return Ok(pair);
     }
 
-    Err("缺少 OAuth 凭据：请设置环境变量 ANTIGRAVITY_OAUTH_CLIENT_ID / ANTIGRAVITY_OAUTH_CLIENT_SECRET，或在应用内保存到系统凭据存储".to_string())
+    Err(format!(
+        "缺少 OAuth 凭据：请设置环境变量 ANTIGRAVITY_OAUTH_CLIENT_ID / ANTIGRAVITY_OAUTH_CLIENT_SECRET，或在应用内保存到系统凭据存储（也可提供旧文件用于迁移：{}）",
+        config_dir.join("oauth_credentials.json").display()
+    ))
 }

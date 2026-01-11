@@ -111,15 +111,14 @@ pub fn migrate_legacy_accounts_if_needed() -> io::Result<()> {
     for entry in read_dir {
         let entry = entry?;
         let path = entry.path();
-        if path.is_file() {
-            if path
+        if path.is_file()
+            && path
                 .extension()
                 .and_then(|s| s.to_str())
                 .map(|s| s.eq_ignore_ascii_case("json"))
                 .unwrap_or(false)
-            {
-                legacy_files.push(path);
-            }
+        {
+            legacy_files.push(path);
         }
     }
     info!(
