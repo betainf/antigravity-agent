@@ -168,8 +168,8 @@ function makeAccount(base: BaseMockAccount): AntigravityAccount {
   const [local] = base.email.split('@');
   return {
     auth: {
-      access_token: base.accessToken ?? `sk_mock_${local}`,
-      refresh_token: base.idToken ?? `id_mock_${local}`,
+      has_access_token: true,
+      has_refresh_token: true,
       created_at: Date.now() + 60 * 60 * 1000,
       token_type: 'oauth',
     },
@@ -228,7 +228,6 @@ function makeSessionItem(
     claudeQuote: addition.claudeQuote,
     claudeQuoteRestIn: addition.claudeQuoteRestIn,
     tier: base.tier,
-    apiKey: `sk_${local}`,
   };
 }
 
@@ -243,7 +242,6 @@ function buildGridItems(
       ...base,
       email: `${name}+${i}@${domain}`,
       nickName: `${base.nickName} #${i + 1}`,
-      apiKey: `${base.apiKey}_${i}`,
     };
   });
 }
@@ -263,7 +261,6 @@ const longEmailItem: AccountSessionListAccountItem = {
   claudeQuote: 0.77,
   claudeQuoteRestIn: '2025-12-22T09:00:00Z',
   tier: 'g1-pro-tier',
-  apiKey: 'sk_mock_long_email',
 };
 
 export const mockAccounts = baseMockAccounts.map(makeAccount);

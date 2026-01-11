@@ -4,6 +4,7 @@ use reqwest::header::{AUTHORIZATION, CONTENT_TYPE, USER_AGENT};
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use std::fs;
+use std::path::Path;
 use tauri::State;
 use tracing::{error, info, instrument};
 
@@ -50,7 +51,7 @@ pub async fn run_trigger_logic(
 
     // 1. Load Account & Token
     let (email_str, proto_bytes) = load_account(config_dir, email).await?;
-    let (access_token, _user_id) = get_valid_token(email, &proto_bytes).await?;
+    let (access_token, _user_id) = get_valid_token(config_dir, email, &proto_bytes).await?;
 
     // 2. Get Project ID (needed for model calls)
     let project = match fetch_code_assist_project(&access_token).await {
@@ -242,7 +243,11 @@ async fn load_account(
     Err("无效的账户文件格式".to_string())
 }
 
-async fn get_valid_token(email: &str, proto_bytes: &[u8]) -> Result<(String, String), String> {
+async fn get_valid_token(
+    config_dir: &Path,
+    email: &str,
+    proto_bytes: &[u8],
+) -> Result<(String, String), String> {
     let mut msg = crate::proto::SessionResponse::decode(proto_bytes)
         .map_err(|e| format!("Proto decode failed: {}", e))?;
 
@@ -250,7 +255,11 @@ async fn get_valid_token(email: &str, proto_bytes: &[u8]) -> Result<(String, Str
     let access_token = auth.access_token.clone();
     let refresh_token = auth.refresh_token.clone();
     // 从 context.email 获取用户 ID
-    let user_id = msg.context.as_ref().map(|c| c.email.clone()).unwrap_or_default();
+    let user_id = msg
+        .context
+        .as_ref()
+        .map(|c| c.email.clone())
+        .unwrap_or_default();
 
     // Check validity by making a quick userinfo call to verify the token works
     if check_token_validity(&access_token).await {
@@ -258,7 +267,7 @@ async fn get_valid_token(email: &str, proto_bytes: &[u8]) -> Result<(String, Str
     }
 
     info!("Token expired for {}, refreshing...", email);
-    let new_token = refresh_access_token(&refresh_token).await?;
+    let new_token = refresh_access_token(config_dir, &refresh_token).await?;
     Ok((new_token, user_id))
 }
 
@@ -277,14 +286,14 @@ async fn check_token_validity(access_token: &str) -> bool {
     }
 }
 
-async fn refresh_access_token(refresh_token: &str) -> Result<String, String> {
+async fn refresh_access_token(config_dir: &Path, refresh_token: &str) -> Result<String, String> {
+    let (client_id, client_secret) =
+        crate::oauth_credentials::resolve_oauth_credentials(config_dir)?;
+
     let client = reqwest::Client::new();
     let params = [
-        (
-            "client_id",
-            "1071006060591-tmhssin2h21lcre235vtolojh4g403ep.apps.googleusercontent.com",
-        ),
-        ("client_secret", "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"),
+        ("client_id", client_id.as_str()),
+        ("client_secret", client_secret.as_str()),
         ("grant_type", "refresh_token"),
         ("refresh_token", refresh_token),
     ];

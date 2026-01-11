@@ -295,6 +295,18 @@ pub async fn clear_all_antigravity_data() -> Result<String, String> {
 pub async fn restore_antigravity_account(account_name: String) -> Result<String, String> {
     tracing::debug!(target: "account::restore", account_name = %account_name, "调用 restore_antigravity_account");
 
+    if account_name.is_empty()
+        || account_name.len() > 255
+        || account_name.contains('/')
+        || account_name.contains('\\')
+        || account_name.contains(':')
+        || !account_name
+            .chars()
+            .all(|c| c.is_ascii_alphanumeric() || matches!(c, '@' | '.' | '_' | '-' | '+'))
+    {
+        return Err("非法账户名".to_string());
+    }
+
     // 1. 构建备份文件路径
     let accounts_dir = crate::directories::get_accounts_directory();
     let account_file = accounts_dir.join(format!("{account_name}.json"));
@@ -353,10 +365,57 @@ pub async fn switch_to_antigravity_account(account_name: String) -> Result<Strin
                 ))
             }
 
-            // 场景 2: 无扩展 + Antigravity 运行中 → 提示安装扩展
+            // 场景 2: 无扩展 + Antigravity 运行中 → 自动重启完成切换
             (false, true) => {
-                tracing::warn!(target: "account::switch::scenario2", "Antigravity 正在运行但无扩展连接");
-                Err("Antigravity 正在运行中，需要安装 VSCode 扩展才能切换账户。\n\n请安装 Antigravity Agent 扩展，扩展会自动重载 Antigravity 窗口。".to_string())
+                tracing::warn!(
+                    target: "account::switch::scenario2",
+                    "Antigravity 正在运行但无扩展连接，使用重启模式切换"
+                );
+
+                match crate::platform::kill_antigravity_processes() {
+                    Ok(result) => {
+                        if result.contains("not found") || result.contains("未找到") {
+                            tracing::debug!(target: "account::switch::step1", "Antigravity 进程未运行，跳过关闭步骤");
+                            "Antigravity 进程未运行".to_string()
+                        } else {
+                            tracing::debug!(target: "account::switch::step1", result = %result, "进程关闭完成");
+                            result
+                        }
+                    }
+                    Err(e) => {
+                        if e.contains("not found") || e.contains("未找到") {
+                            tracing::debug!(target: "account::switch::step1", "Antigravity 进程未运行，跳过关闭步骤");
+                            "Antigravity 进程未运行".to_string()
+                        } else {
+                            tracing::error!(target: "account::switch::step1", error = %e, "关闭进程时发生错误");
+                            return Err(format!("关闭进程时发生错误: {}", e));
+                        }
+                    }
+                };
+
+                tokio::time::sleep(tokio::time::Duration::from_millis(1000)).await;
+
+                clear_all_antigravity_data().await?;
+                tracing::debug!(target: "account::switch::step1", "Antigravity 数据库清除完成");
+
+                restore_antigravity_account(account_name.clone()).await?;
+                tracing::debug!(target: "account::switch::step2", "账户数据恢复完成");
+
+                tokio::time::sleep(tokio::time::Duration::from_millis(1000)).await;
+
+                match crate::antigravity::starter::start_antigravity() {
+                    Ok(result) => {
+                        tracing::info!(target: "account::switch::step3", result = %result, "Antigravity 启动成功");
+                        Ok(format!(
+                            "账户已切换到 {}，已重启 Antigravity 完成切换",
+                            account_name
+                        ))
+                    }
+                    Err(e) => {
+                        tracing::error!(target: "account::switch::step3", error = %e, "Antigravity 启动失败");
+                        Err(format!("账户数据已恢复，但启动 Antigravity 失败: {}", e))
+                    }
+                }
             }
 
             // 场景 3: 无扩展 + Antigravity 未运行 → 恢复数据 + 启动进程

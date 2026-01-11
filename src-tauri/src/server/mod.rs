@@ -1,5 +1,6 @@
 use crate::AppState;
 use actix_cors::Cors;
+use actix_web::http::header;
 use actix_web::{get, post, web, App, HttpResponse, HttpServer, Responder};
 use serde_json::json;
 use std::sync::Arc;
@@ -107,7 +108,17 @@ pub fn init(app_handle: tauri::AppHandle, state: Arc<parking_lot::Mutex<AppState
 
         sys.block_on(async move {
             let server = HttpServer::new(move || {
-                let cors = Cors::permissive();
+                let cors = Cors::default()
+                    .allowed_origin_fn(|origin, _req_head| {
+                        let origin = origin.to_str().unwrap_or_default();
+                        origin.starts_with("vscode-webview://")
+                            || origin.starts_with("tauri://")
+                            || origin.starts_with("http://127.0.0.1")
+                            || origin.starts_with("http://localhost")
+                    })
+                    .allowed_methods(vec!["GET", "POST"])
+                    .allowed_headers(vec![header::CONTENT_TYPE, header::AUTHORIZATION])
+                    .max_age(3600);
 
                 App::new()
                     .wrap(cors)

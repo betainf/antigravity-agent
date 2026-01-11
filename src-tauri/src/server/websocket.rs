@@ -430,6 +430,14 @@ pub async fn ws_handler(
     stream: web::Payload,
 ) -> Result<HttpResponse, actix_web::Error> {
     tracing::info!("新的 WebSocket 连接请求");
+    if let Some(origin) = req.headers().get("origin") {
+        let origin = origin.to_str().unwrap_or_default();
+        let allowed = origin.starts_with("vscode-webview://") || origin.starts_with("tauri://");
+        if !allowed {
+            tracing::warn!(origin = %origin, "WebSocket 连接被拒绝：Origin 不受信任");
+            return Ok(HttpResponse::Forbidden().finish());
+        }
+    }
     ws::start(WsSession::new(), &req, stream)
 }
 

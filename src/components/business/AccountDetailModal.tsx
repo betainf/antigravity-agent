@@ -26,7 +26,7 @@ const BusinessUserDetail: React.FC<BusinessUserDetailProps> = ({
   // 复制到剪贴板功能
   const copyToClipboard = async (text: string, fieldName: string) => {
     try {
-      await navigator.clipboard.writeText(account[fieldName]);
+      await navigator.clipboard.writeText(text);
       setCopiedField(fieldName);
       setTimeout(() => setCopiedField(null), 2000);
     } catch (error) {
@@ -43,6 +43,7 @@ const BusinessUserDetail: React.FC<BusinessUserDetailProps> = ({
     label,
     value,
     copyable = false,
+    copyText,
     fieldName = '',
     isMultiline = false
   }: {
@@ -71,7 +72,7 @@ const BusinessUserDetail: React.FC<BusinessUserDetailProps> = ({
             variant="ghost"
             size="icon"
             className="absolute top-1 right-1 h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity"
-            onClick={() => copyToClipboard(value, fieldName)}
+            onClick={() => copyToClipboard(copyText ?? value, fieldName)}
             title={t('common:buttons.copy')}
           >
             {copiedField === fieldName ? (
@@ -117,8 +118,6 @@ const BusinessUserDetail: React.FC<BusinessUserDetailProps> = ({
           icon={<Key className="h-4 w-4 text-orange-500" />}
           label={t('accountDetail.apiKey')}
           value={"****"}
-          copyable
-          fieldName="apiKey"
         />
       </div>
     </Modal>

@@ -1,4 +1,4 @@
-﻿import React from 'react';
+import React from 'react';
 import { AccountSessionListCard } from './AccountSessionListCard';
 import {motion, AnimatePresence, Variants} from 'motion/react';
 import { AnimatedGridPattern } from "@/components/ui/animated-grid-pattern.tsx";
@@ -20,7 +20,6 @@ export interface AccountSessionListAccountItem {
   nickName: string;
   userAvatar: string;
   tier: UserTier;
-  apiKey: string;
 }
 
 export interface AccountSessionListProps {

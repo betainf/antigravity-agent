@@ -209,7 +209,6 @@ export function AppContent() {
       email: account.context.email,
       nickName: account.context.plan_name,
       userAvatar: accountAdditionDatum?.userAvatar ?? "",
-      apiKey: account.auth.access_token,
       // 似乎在某些情况下 plan 可能为 null，这里添加 null 检查
       tier: (account.context.plan?.tier_id ?? '') as UserTier,
     }

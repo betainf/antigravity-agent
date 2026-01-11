@@ -4,6 +4,7 @@ use reqwest::header::{AUTHORIZATION, CONTENT_TYPE, USER_AGENT};
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use std::fs;
+use std::path::Path;
 use tauri::State;
 use tracing::{info, instrument};
 
@@ -58,7 +59,7 @@ pub async fn get_metrics_logic(
     info!("🚀 开始获取账户指标 (Logic), email: {}", email);
 
     let (email, proto_bytes) = load_account(config_dir, &email).await?;
-    process_account(email, proto_bytes).await
+    process_account(config_dir, email, proto_bytes).await
 }
 
 // --- Helpers ---
@@ -102,7 +103,11 @@ async fn load_account(
     Err("无效的账户文件格式".to_string())
 }
 
-async fn process_account(email: String, proto_bytes: Vec<u8>) -> Result<AccountMetrics, String> {
+async fn process_account(
+    config_dir: &Path,
+    email: String,
+    proto_bytes: Vec<u8>,
+) -> Result<AccountMetrics, String> {
     // 1. Decode Proto to get tokens
     let mut msg = crate::proto::SessionResponse::decode(proto_bytes.as_slice())
         .map_err(|e| format!("Proto decode failed: {}", e))?;
@@ -117,7 +122,7 @@ async fn process_account(email: String, proto_bytes: Vec<u8>) -> Result<AccountM
         Err(_) => {
             info!("Token expired for {}, refreshing...", email);
             // 3. Refresh Token
-            let new_token = refresh_access_token(&refresh_token).await?;
+            let new_token = refresh_access_token(config_dir, &refresh_token).await?;
             // Update local var
             access_token = new_token.clone();
             // Update Proto struct
@@ -172,14 +177,14 @@ async fn fetch_user_info(access_token: &str) -> Result<UserInfoResponse, String>
         .map_err(|e| e.to_string())
 }
 
-async fn refresh_access_token(refresh_token: &str) -> Result<String, String> {
+async fn refresh_access_token(config_dir: &Path, refresh_token: &str) -> Result<String, String> {
+    let (client_id, client_secret) =
+        crate::oauth_credentials::resolve_oauth_credentials(config_dir)?;
+
     let client = reqwest::Client::new();
     let params = [
-        (
-            "client_id",
-            "1071006060591-tmhssin2h21lcre235vtolojh4g403ep.apps.googleusercontent.com",
-        ),
-        ("client_secret", "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"),
+        ("client_id", client_id.as_str()),
+        ("client_secret", client_secret.as_str()),
         ("grant_type", "refresh_token"),
         ("refresh_token", refresh_token),
     ];

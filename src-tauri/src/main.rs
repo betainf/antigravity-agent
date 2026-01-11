@@ -21,6 +21,7 @@ mod window;
 
 mod commands;
 mod db_monitor;
+mod oauth_credentials;
 mod path_utils;
 mod setup;
 mod state;
@@ -166,6 +167,9 @@ fn main() {
             get_all_settings,
             get_language,
             set_language,
+            save_oauth_credentials,
+            clear_oauth_credentials,
+            has_oauth_credentials,
             // 数据库监控命令
             is_database_monitoring_running,
             start_database_monitoring,

@@ -1,4 +1,4 @@
-﻿import {fetch} from '@tauri-apps/plugin-http'
+import {fetch} from '@tauri-apps/plugin-http'
 import {CloudCodeAPITypes} from "@/services/cloudcode-api.types.ts";
 
 // HTTP 客户端配置
@@ -87,43 +87,8 @@ export namespace CloudCodeAPI {
   }
 
   /**
-   * curl --request POST \
-   *   --url https://oauth2.googleapis.com/token \
-   *   --header 'content-type: application/x-www-form-urlencoded' \
-   *   --data client_id=1071006060591-tmhssin2h21lcre235vtolojh4g403ep.apps.googleusercontent.com \
-   *   --data client_secret=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 \
-   *   --data grant_type=refresh_token \
-   *   --data refresh_token=<>
-   * @param refresh_token
+   * token 刷新应在后端完成，避免将 client_secret 暴露到前端
    */
-  export async function refreshAccessToken(
-    refresh_token: string,
-  ) {
-    const requestData = {
-      "client_id": "1071006060591-tmhssin2h21lcre235vtolojh4g403ep.apps.googleusercontent.com",
-      "client_secret": "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",
-      "grant_type": "refresh_token",
-      "refresh_token": refresh_token
-    };
-
-    const requestConfig: RequestInit = {
-      method: 'POST',
-      body: JSON.stringify(requestData)
-    };
-
-
-    const response = await fetch(
-      'https://oauth2.googleapis.com/token',
-      requestConfig,
-    );
-    const json = await response.json() as unknown as CloudCodeAPITypes.RefreshAccessTokenResponse | CloudCodeAPITypes.ErrorResponse;
-
-    if ("error" in json) {
-      return Promise.reject(json);
-    }
-
-    return json;
-  }
 
   export async function userinfo(
     access_token: string,
@@ -147,4 +112,3 @@ export namespace CloudCodeAPI {
   }
 
 }
-

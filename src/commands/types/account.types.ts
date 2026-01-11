@@ -1,7 +1,7 @@
 
 // Antigravity 当前用户信息类型
 export interface AntigravityAccount {
-  auth: Auth
+  auth: Auth | null
   context: Context
   field_5_base64: string | null
   field_7_base64: string | null
@@ -16,9 +16,9 @@ export interface AntigravityAccount {
 }
 
 interface Auth {
-  access_token: string
-  token_type: string       // 原 type
-  refresh_token: string    // 原 id_token
+  has_access_token: boolean
+  has_refresh_token: boolean
+  token_type: string
   created_at: number | null  // 原 meta.expiry_timestamp
 }
 

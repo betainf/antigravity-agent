@@ -20,7 +20,10 @@ fn clear_database(db_path: &Path, db_name: &str) -> Result<usize, String> {
     // 根据用户报告, 有些情况不删除 antigravityAuthStatus, Antigravity 不会生成新的
     let antigravity_auth_status_key = "antigravityAuthStatus";
     let antigravity_auth_status_rows = conn
-        .execute("DELETE FROM ItemTable WHERE key = ?", [antigravity_auth_status_key])
+        .execute(
+            "DELETE FROM ItemTable WHERE key = ?",
+            [antigravity_auth_status_key],
+        )
         .unwrap_or(0);
 
     // 把 antigravityOnboarding 设置为布尔值 true（写为字符串 "true"） 以跳过首次启动引导

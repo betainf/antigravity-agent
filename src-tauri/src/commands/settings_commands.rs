@@ -3,6 +3,46 @@
 
 use tauri::{AppHandle, Manager};
 
+fn validate_oauth_input(client_id: &str, client_secret: &str) -> Result<(), String> {
+    if client_id.trim().is_empty() {
+        return Err("client_id 不能为空".to_string());
+    }
+    if client_secret.trim().is_empty() {
+        return Err("client_secret 不能为空".to_string());
+    }
+    if client_id.len() > 4096 || client_secret.len() > 8192 {
+        return Err("OAuth 凭据长度异常".to_string());
+    }
+    Ok(())
+}
+
+#[tauri::command]
+pub async fn save_oauth_credentials(
+    client_id: String,
+    client_secret: String,
+) -> Result<bool, String> {
+    crate::log_async_command!("save_oauth_credentials", async {
+        validate_oauth_input(&client_id, &client_secret)?;
+        crate::oauth_credentials::save_oauth_credentials_to_keyring(&client_id, &client_secret)?;
+        Ok(true)
+    })
+}
+
+#[tauri::command]
+pub async fn clear_oauth_credentials() -> Result<bool, String> {
+    crate::log_async_command!("clear_oauth_credentials", async {
+        crate::oauth_credentials::clear_oauth_credentials_from_keyring()?;
+        Ok(true)
+    })
+}
+
+#[tauri::command]
+pub async fn has_oauth_credentials() -> Result<bool, String> {
+    crate::log_async_command!("has_oauth_credentials", async {
+        crate::oauth_credentials::has_oauth_credentials_in_keyring()
+    })
+}
+
 /// 保存系统托盘状态
 #[tauri::command]
 pub async fn save_system_tray_state(app: AppHandle, enabled: bool) -> Result<bool, String> {

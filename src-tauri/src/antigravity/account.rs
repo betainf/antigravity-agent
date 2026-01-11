@@ -41,9 +41,9 @@ fn session_response_to_json(msg: &crate::proto::SessionResponse) -> Value {
     // 认证信息
     let auth = msg.auth.as_ref().map(|a| {
         serde_json::json!({
-            "access_token": a.access_token,
+            "has_access_token": !a.access_token.is_empty(),
+            "has_refresh_token": !a.refresh_token.is_empty(),
             "token_type": a.token_type,
-            "refresh_token": a.refresh_token,
             "created_at": a.created_at.as_ref().map(|t| t.seconds),
         })
     });

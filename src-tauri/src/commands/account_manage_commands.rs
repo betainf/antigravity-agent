@@ -7,6 +7,25 @@ use std::fs;
 use std::time::SystemTime;
 use tauri::State;
 
+fn is_safe_backup_name(s: &str) -> bool {
+    if s.is_empty() || s.len() > 255 {
+        return false;
+    }
+    if s.contains('/') || s.contains('\\') || s.contains(':') {
+        return false;
+    }
+    s.chars()
+        .all(|c| c.is_ascii_alphanumeric() || matches!(c, '@' | '.' | '_' | '-' | '+'))
+}
+
+fn is_safe_backup_filename(filename: &str) -> bool {
+    if !filename.ends_with(".json") {
+        return false;
+    }
+    let name = filename.trim_end_matches(".json");
+    is_safe_backup_name(name)
+}
+
 /// 备份数据收集结构
 #[derive(Serialize, Deserialize, Debug)]
 pub struct AccountExportedData {
@@ -38,6 +57,8 @@ pub async fn collect_account_contents(
 ) -> Result<Vec<AccountExportedData>, String> {
     let mut backups_with_content = Vec::new();
 
+    const MAX_ACCOUNT_JSON_BYTES: u64 = 5 * 1024 * 1024;
+
     // 读取Antigravity账户目录中的JSON文件
     let antigravity_dir = state.config_dir.join("antigravity-accounts");
 
@@ -59,6 +80,17 @@ pub async fn collect_account_contents(
 
             if filename.is_empty() {
                 continue;
+            }
+
+            if !is_safe_backup_filename(&filename) {
+                continue;
+            }
+
+            if let Ok(meta) = fs::metadata(&path) {
+                if meta.len() > MAX_ACCOUNT_JSON_BYTES {
+                    tracing::warn!(target: "backup::scan", filename = %filename, "跳过过大的账户文件");
+                    continue;
+                }
             }
 
             match fs::read_to_string(&path).map_err(|e| format!("读取文件失败 {}: {}", filename, e))
@@ -99,6 +131,13 @@ pub async fn restore_backup_files(
         failed: Vec::new(),
     };
 
+    const MAX_RESTORE_FILES: usize = 200;
+    const MAX_ACCOUNT_JSON_BYTES: usize = 5 * 1024 * 1024;
+
+    if account_file_data.len() > MAX_RESTORE_FILES {
+        return Err("导入文件过多".to_string());
+    }
+
     // 获取目标目录
     let antigravity_dir = state.config_dir.join("antigravity-accounts");
 
@@ -109,23 +148,59 @@ pub async fn restore_backup_files(
 
     // 遍历每个备份
     for account_file in account_file_data {
+        if !is_safe_backup_filename(&account_file.filename) {
+            results.failed.push(FailedAccountExportedData {
+                filename: account_file.filename,
+                error: "非法文件名".to_string(),
+            });
+            continue;
+        }
         let file_path = antigravity_dir.join(&account_file.filename);
 
-        match fs::write(
-            &file_path,
-            serde_json::to_string_pretty(&account_file.content).unwrap_or_default(),
-        )
-        .map_err(|e| format!("写入文件失败: {}", e))
+        let serialized = match serde_json::to_string_pretty(&account_file.content)
+            .map_err(|e| format!("序列化失败: {}", e))
         {
-            Ok(_) => {
-                results.restored_count += 1;
-            }
+            Ok(s) => s,
             Err(e) => {
                 results.failed.push(FailedAccountExportedData {
                     filename: account_file.filename,
                     error: e,
                 });
+                continue;
             }
+        };
+
+        if serialized.len() > MAX_ACCOUNT_JSON_BYTES {
+            results.failed.push(FailedAccountExportedData {
+                filename: account_file.filename,
+                error: "账户文件过大".to_string(),
+            });
+            continue;
+        }
+
+        let write_result = (|| -> Result<(), String> {
+            let mut tmp = tempfile::Builder::new()
+                .prefix(".restore_")
+                .suffix(".tmp")
+                .tempfile_in(&antigravity_dir)
+                .map_err(|e| format!("创建临时文件失败: {}", e))?;
+            use std::io::Write;
+            tmp.write_all(serialized.as_bytes())
+                .map_err(|e| format!("写入临时文件失败: {}", e))?;
+            if file_path.exists() {
+                fs::remove_file(&file_path).map_err(|e| format!("覆盖旧文件失败: {}", e))?;
+            }
+            tmp.persist(&file_path)
+                .map_err(|e| format!("落盘失败: {}", e.error))?;
+            Ok(())
+        })();
+
+        match write_result {
+            Ok(()) => results.restored_count += 1,
+            Err(e) => results.failed.push(FailedAccountExportedData {
+                filename: account_file.filename,
+                error: e,
+            }),
         }
     }
 
@@ -138,6 +213,9 @@ pub async fn delete_backup(
     name: String,
     state: State<'_, crate::AppState>,
 ) -> Result<String, String> {
+    if !is_safe_backup_name(&name) {
+        return Err("非法账户名".to_string());
+    }
     // 只删除Antigravity账户JSON文件
     let antigravity_dir = state.config_dir.join("antigravity-accounts");
     let antigravity_file = antigravity_dir.join(format!("{}.json", name));
@@ -185,25 +263,81 @@ pub async fn clear_all_backups(state: State<'_, crate::AppState>) -> Result<Stri
 #[tauri::command]
 pub async fn encrypt_config_data(json_data: String, password: String) -> Result<String, String> {
     log_async_command!("encrypt_config_data", async {
+        use argon2::Argon2;
         use base64::{engine::general_purpose::STANDARD as BASE64, Engine as _};
+        use chacha20poly1305::aead::{Aead, KeyInit};
+        use chacha20poly1305::XChaCha20Poly1305;
+        use rand::RngCore;
+        use zeroize::Zeroize;
 
-        if password.is_empty() {
+        const ENCRYPTED_PREFIX: &str = "AGENC1:";
+        const MAX_PLAINTEXT_BYTES: usize = 5 * 1024 * 1024;
+
+        if json_data.len() > MAX_PLAINTEXT_BYTES {
+            return Err("待加密数据过大".to_string());
+        }
+
+        let mut password_bytes = password.into_bytes();
+        if password_bytes.is_empty() {
             return Err("密码不能为空".to_string());
         }
-
-        let password_bytes = password.as_bytes();
-        let mut result = Vec::new();
-
-        // XOR 加密
-        for (i, byte) in json_data.as_bytes().iter().enumerate() {
-            let key_byte = password_bytes[i % password_bytes.len()];
-            result.push(byte ^ key_byte);
+        if password_bytes.len() < 8 {
+            return Err("密码长度至少 8 位".to_string());
+        }
+        if password_bytes.len() > 1024 {
+            return Err("密码长度过长".to_string());
         }
 
-        // Base64 编码
-        let encoded = BASE64.encode(&result);
+        let mut salt = [0u8; 16];
+        let mut nonce = [0u8; 24];
+        rand::thread_rng().fill_bytes(&mut salt);
+        rand::thread_rng().fill_bytes(&mut nonce);
 
-        Ok(encoded)
+        let params = argon2::Params::new(32768, 3, 1, Some(32))
+            .map_err(|_| "加密参数初始化失败".to_string())?;
+        let argon2 = Argon2::new(argon2::Algorithm::Argon2id, argon2::Version::V0x13, params);
+
+        let mut key = [0u8; 32];
+        argon2
+            .hash_password_into(&password_bytes, &salt, &mut key)
+            .map_err(|_| "派生密钥失败".to_string())?;
+        password_bytes.zeroize();
+
+        let cipher = XChaCha20Poly1305::new((&key).into());
+        let ciphertext = cipher
+            .encrypt((&nonce).into(), json_data.as_bytes())
+            .map_err(|_| "加密失败".to_string())?;
+        key.zeroize();
+
+        #[derive(Serialize)]
+        struct Payload<'a> {
+            v: u8,
+            kdf: &'a str,
+            m_cost_kib: u32,
+            t_cost: u32,
+            p_cost: u32,
+            salt_b64: String,
+            nonce_b64: String,
+            ct_b64: String,
+        }
+
+        let payload = Payload {
+            v: 1,
+            kdf: "argon2id",
+            m_cost_kib: 32768,
+            t_cost: 3,
+            p_cost: 1,
+            salt_b64: BASE64.encode(salt),
+            nonce_b64: BASE64.encode(nonce),
+            ct_b64: BASE64.encode(ciphertext),
+        };
+
+        let json = serde_json::to_string(&payload).map_err(|_| "序列化密文失败".to_string())?;
+        Ok(format!(
+            "{}{}",
+            ENCRYPTED_PREFIX,
+            BASE64.encode(json.as_bytes())
+        ))
     })
 }
 
@@ -214,27 +348,95 @@ pub async fn decrypt_config_data(
     password: String,
 ) -> Result<String, String> {
     log_async_command!("decrypt_config_data", async {
+        use argon2::Argon2;
         use base64::{engine::general_purpose::STANDARD as BASE64, Engine as _};
+        use chacha20poly1305::aead::{Aead, KeyInit};
+        use chacha20poly1305::XChaCha20Poly1305;
+        use zeroize::Zeroize;
 
-        if password.is_empty() {
+        const ENCRYPTED_PREFIX: &str = "AGENC1:";
+
+        let mut password_bytes = password.into_bytes();
+        if password_bytes.is_empty() {
             return Err("密码不能为空".to_string());
         }
+        if password_bytes.len() > 1024 {
+            return Err("密码长度过长".to_string());
+        }
 
-        let decoded = BASE64
+        if let Some(rest) = encrypted_data.strip_prefix(ENCRYPTED_PREFIX) {
+            #[derive(Deserialize)]
+            struct Payload {
+                v: u8,
+                kdf: String,
+                m_cost_kib: u32,
+                t_cost: u32,
+                p_cost: u32,
+                salt_b64: String,
+                nonce_b64: String,
+                ct_b64: String,
+            }
+
+            let json_bytes = BASE64
+                .decode(rest)
+                .map_err(|_| "密文格式无效".to_string())?;
+            let json_str =
+                std::str::from_utf8(&json_bytes).map_err(|_| "密文格式无效".to_string())?;
+            let payload: Payload =
+                serde_json::from_str(json_str).map_err(|_| "密文格式无效".to_string())?;
+
+            if payload.v != 1 || payload.kdf != "argon2id" {
+                return Err("不支持的密文版本".to_string());
+            }
+
+            let salt = BASE64
+                .decode(payload.salt_b64)
+                .map_err(|_| "密文格式无效".to_string())?;
+            let nonce = BASE64
+                .decode(payload.nonce_b64)
+                .map_err(|_| "密文格式无效".to_string())?;
+            let ciphertext = BASE64
+                .decode(payload.ct_b64)
+                .map_err(|_| "密文格式无效".to_string())?;
+
+            if salt.len() != 16 || nonce.len() != 24 {
+                return Err("密文格式无效".to_string());
+            }
+
+            let params =
+                argon2::Params::new(payload.m_cost_kib, payload.t_cost, payload.p_cost, Some(32))
+                    .map_err(|_| "密文参数无效".to_string())?;
+            let argon2 = Argon2::new(argon2::Algorithm::Argon2id, argon2::Version::V0x13, params);
+
+            let mut key = [0u8; 32];
+            argon2
+                .hash_password_into(&password_bytes, &salt, &mut key)
+                .map_err(|_| "解密失败".to_string())?;
+            password_bytes.zeroize();
+
+            let cipher = XChaCha20Poly1305::new((&key).into());
+            let plaintext = cipher
+                .decrypt((&nonce[..]).into(), ciphertext.as_ref())
+                .map_err(|_| "解密失败，密码错误或数据已损坏".to_string())?;
+            key.zeroize();
+
+            let decrypted =
+                String::from_utf8(plaintext).map_err(|_| "解密失败，数据可能已损坏".to_string())?;
+            return Ok(decrypted);
+        }
+
+        use base64::engine::general_purpose::STANDARD as LEGACY_BASE64;
+        let decoded = LEGACY_BASE64
             .decode(encrypted_data)
             .map_err(|_| "Base64 解码失败".to_string())?;
-
-        let password_bytes = password.as_bytes();
-        let mut result = Vec::new();
-
+        let mut result = Vec::with_capacity(decoded.len());
         for (i, byte) in decoded.iter().enumerate() {
             let key_byte = password_bytes[i % password_bytes.len()];
             result.push(byte ^ key_byte);
         }
-
+        password_bytes.zeroize();
         let decrypted =
             String::from_utf8(result).map_err(|_| "解密失败，数据可能已损坏".to_string())?;
-
         Ok(decrypted)
     })
 }
