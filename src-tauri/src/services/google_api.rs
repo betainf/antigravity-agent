@@ -102,13 +102,14 @@ pub async fn fetch_user_info(access_token: &str) -> Result<UserInfoResponse, Str
 }
 
 pub async fn refresh_access_token(refresh_token: &str) -> Result<String, String> {
+    // 使用安全的凭据管理模块获取 OAuth 凭据
+    let config_dir = crate::directories::get_config_directory();
+    let (client_id, client_secret) = crate::security::credentials::resolve_oauth_credentials(&config_dir)?;
+    
     let client = reqwest::Client::new();
     let params = [
-        (
-            "client_id",
-            "1071006060591-tmhssin2h21lcre235vtolojh4g403ep.apps.googleusercontent.com",
-        ),
-        ("client_secret", "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"),
+        ("client_id", client_id.as_str()),
+        ("client_secret", client_secret.as_str()),
         ("grant_type", "refresh_token"),
         ("refresh_token", refresh_token),
     ];

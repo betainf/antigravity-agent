@@ -21,8 +21,9 @@ mod utils;
 mod window;
 
 mod db_monitor;
-mod oauth_credentials;
+mod oauth_credentials; // 保留兼容，实际功能在 security::credentials
 mod path_utils;
+mod security; // Security module (独立于上游，避免合并冲突)
 mod setup;
 mod state;
 

@@ -364,7 +364,7 @@ struct CryptoRequest {
 
 #[post("/api/encrypt_config_data")]
 async fn encrypt_data(req: web::Json<CryptoRequest>) -> impl Responder {
-    match crate::services::crypto::encrypt_config_data(req.data.clone(), req.password.clone()).await {
+    match crate::security::crypto::encrypt_config_data(req.data.clone(), req.password.clone()).await {
         Ok(res) => HttpResponse::Ok().json(json!({ "result": res })),
         Err(e) => HttpResponse::InternalServerError().json(json!({ "error": e }))
     }
@@ -372,7 +372,7 @@ async fn encrypt_data(req: web::Json<CryptoRequest>) -> impl Responder {
 
 #[post("/api/decrypt_config_data")]
 async fn decrypt_data(req: web::Json<CryptoRequest>) -> impl Responder {
-    match crate::services::crypto::decrypt_config_data(req.data.clone(), req.password.clone()).await {
+    match crate::security::crypto::decrypt_config_data(req.data.clone(), req.password.clone()).await {
         Ok(res) => HttpResponse::Ok().json(json!({ "result": res })),
         Err(e) => HttpResponse::InternalServerError().json(json!({ "error": e }))
     }
