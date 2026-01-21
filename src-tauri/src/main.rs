@@ -118,57 +118,7 @@ fn main() {
 
             Ok(())
         })
-        .invoke_handler(tauri::generate_handler![
-            collect_account_contents,
-            restore_backup_files,
-            delete_backup,
-            clear_all_backups,
-            // 账户基础命令
-            get_antigravity_accounts,
-            get_account_metrics,
-            trigger_quota_refresh,
-            get_current_antigravity_account_info,
-            save_antigravity_current_account,
-            restore_antigravity_account,
-            switch_to_antigravity_account,
-            clear_all_antigravity_data,
-            is_antigravity_running,
-            sign_in_new_antigravity_account,
-            // 平台支持命令
-            get_platform_info,
-            find_antigravity_installations,
-            get_current_paths,
-            // 数据库路径相关
-            detect_antigravity_installation,
-            // 可执行文件路径相关
-            validate_antigravity_executable,
-            detect_antigravity_executable,
-            save_antigravity_executable,
-            minimize_to_tray,
-            restore_from_tray,
-            update_tray_menu_command,
-            save_system_tray_state,
-            save_silent_start_state,
-            save_private_mode_state,
-            save_debug_mode_state,
-            get_all_settings,
-            get_language,
-            set_language,
-            save_oauth_credentials,
-            clear_oauth_credentials,
-            has_oauth_credentials,
-            // 数据库监控命令
-            is_database_monitoring_running,
-            start_database_monitoring,
-            stop_database_monitoring,
-            decrypt_config_data,
-            encrypt_config_data,
-            write_text_file,
-            write_frontend_log,
-            commands::open_log_directory,
-            commands::get_log_directory_path,
-            commands::launch_and_install_extension,
-        ])
+        .invoke_handler(tauri::generate_handler![])
 
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
