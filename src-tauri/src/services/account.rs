@@ -389,7 +389,7 @@ pub async fn switch(account_name: String) -> Result<String, String> {
 
                 tokio::time::sleep(tokio::time::Duration::from_millis(1000)).await;
 
-                clear_all_antigravity_data().await?;
+                clear_all_data().await?;
                 tracing::debug!(target: "account::switch::step1", "Antigravity 数据库清除完成");
 
                 restore(account_name.clone()).await?;
