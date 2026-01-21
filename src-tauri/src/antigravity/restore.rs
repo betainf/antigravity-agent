@@ -80,13 +80,30 @@ pub async fn save_antigravity_account_to_file(
             tracing::debug!(target: "restore::database", key = %database::AGENT_STATE, "备份中未找到字段，跳过");
         }
 
-        if let Err(e) = conn.execute(
-            "DELETE FROM ItemTable WHERE key = ?",
-            [database::AUTH_STATUS],
-        ) {
-            tracing::warn!(target: "restore::database", error = %e, "删除 antigravityAuthStatus 失败（忽略）");
+        if let Some(val) = account_data.get(database::AUTH_STATUS) {
+            if let Some(val_str) = val.as_str() {
+                match conn.execute(
+                    "INSERT OR REPLACE INTO ItemTable (key, value) VALUES (?, ?)",
+                    params![database::AUTH_STATUS, val_str],
+                ) {
+                    Ok(_) => {
+                        tracing::debug!(target: "restore::database", key = %database::AUTH_STATUS, "注入认证状态成功");
+                        restored_count += 1;
+                    }
+                    Err(e) => {
+                        tracing::error!(target: "restore::database", key = %database::AUTH_STATUS, error = %e, "写入认证状态失败");
+                    }
+                }
+            }
         } else {
-            tracing::debug!(target: "restore::database", "已删除 antigravityAuthStatus");
+             if let Err(e) = conn.execute(
+                "DELETE FROM ItemTable WHERE key = ?",
+                [database::AUTH_STATUS],
+            ) {
+                tracing::warn!(target: "restore::database", error = %e, "删除 antigravityAuthStatus 失败（忽略）");
+            } else {
+                tracing::debug!(target: "restore::database", "旧备份无认证状态，已清理旧数据");
+            }
         }
 
         Ok(restored_count)

@@ -3,6 +3,7 @@ import * as fs from 'fs';
 import { Logger } from '../utils/logger';
 import { AutoAcceptManager } from './auto-accept-manager';
 import { TranslationManager } from './translation-manager';
+import { StatusBarManager } from './status-bar-manager';
 
 // Declare global function injected by Vite build or shim
 // declare const __getWebviewHtml__: (options: any) => string;
@@ -55,7 +56,7 @@ export class AntigravityPanel {
         AntigravityPanel.currentPanel = new AntigravityPanel(panel, context);
     }
 
-    private constructor(panel: vscode.WebviewPanel, context: vscode.ExtensionContext) {
+    public constructor(panel: vscode.WebviewPanel, context: vscode.ExtensionContext) {
         this._panel = panel;
         this._context = context;
 
@@ -63,15 +64,61 @@ export class AntigravityPanel {
         this._update();
 
         // Listen for when the panel is disposed
+        // This happens when the user closes the panel or when the panel is closed programmatically
         this._panel.onDidDispose(() => this.dispose(), null, this._disposables);
+
+        // Update the content based on view state changes
+        this._panel.onDidChangeViewState(
+            e => {
+                if (this._panel.visible) {
+                    this._update();
+                }
+            },
+            null,
+            this._disposables
+        );
+
+        // Listen for configuration changes to sync Webview UI
+        vscode.workspace.onDidChangeConfiguration(e => {
+            if (e.affectsConfiguration('antigravity-agent')) {
+                const config = vscode.workspace.getConfiguration('antigravity-agent');
+
+                // Sync Auto Pilot
+                if (e.affectsConfiguration('antigravity-agent.autoPilot')) {
+                    this._panel.webview.postMessage({
+                        command: 'autoPilotState',
+                        enabled: config.get<boolean>('autoPilot', false)
+                    });
+                }
+
+                // Sync Privacy Mode
+                if (e.affectsConfiguration('antigravity-agent.privacy')) {
+                    this._panel.webview.postMessage({
+                        command: 'privacyModeState',
+                        enabled: config.get<boolean>('privacy', false)
+                    });
+                }
+
+                // Sync Show Account
+                if (e.affectsConfiguration('antigravity-agent.showAccount')) {
+                    this._panel.webview.postMessage({
+                        command: 'showAccountState',
+                        enabled: config.get<boolean>('showAccount', true)
+                    });
+                }
+            }
+        }, null, this._disposables);
 
         // Handle messages from the webview
         this._panel.webview.onDidReceiveMessage(
             message => {
                 try {
-                    Logger.log(`Received message: ${message.command}`, message);
                     switch (message.command) {
+                        case 'alert':
+                            vscode.window.showErrorMessage(message.text);
+                            break;
                         case 'setAutoAccept':
+                            vscode.workspace.getConfiguration('antigravity-agent').update('autoPilot', message.enabled, vscode.ConfigurationTarget.Global);
                             AutoAcceptManager.toggle(message.enabled);
                             break;
                         case 'getAutoPilotState':
@@ -82,20 +129,23 @@ export class AntigravityPanel {
                             break;
                         case 'openExternal':
                             if (message.url) {
-                                const t = TranslationManager.getInstance().t.bind(TranslationManager.getInstance());
-                                vscode.window.showInformationMessage(t('msg.opening', message.url));
                                 vscode.env.openExternal(vscode.Uri.parse(message.url));
                             }
                             break;
                         case 'copyToClipboard':
                             if (message.text) {
-                                const t = TranslationManager.getInstance().t.bind(TranslationManager.getInstance());
                                 vscode.env.clipboard.writeText(message.text);
-                                vscode.window.showInformationMessage(t('msg.copied'));
+                                vscode.window.showInformationMessage(TranslationManager.getInstance().t('common:status.copied'));
                             }
                             break;
                         case 'reloadWindow':
                             vscode.commands.executeCommand('workbench.action.reloadWindow');
+                            break;
+                        case 'setPrivacyMode':
+                            vscode.workspace.getConfiguration('antigravity-agent').update('privacy', message.enabled, vscode.ConfigurationTarget.Global);
+                            break;
+                        case 'setShowAccount':
+                            vscode.workspace.getConfiguration('antigravity-agent').update('showAccount', message.enabled, vscode.ConfigurationTarget.Global);
                             break;
                     }
                 } catch (err) {
@@ -123,11 +173,20 @@ export class AntigravityPanel {
 
     private _update() {
         this._panel.webview.html = this._getHtmlForWebview(this._panel.webview);
-        // Send initial Auto Pilot state after a short delay to ensure Webview is ready
+        // Send initial states after a short delay
         setTimeout(() => {
+            const config = vscode.workspace.getConfiguration('antigravity-agent');
             this._panel.webview.postMessage({
                 command: 'autoPilotState',
-                enabled: AutoAcceptManager.isEnabled()
+                enabled: config.get<boolean>('autoPilot', false)
+            });
+            this._panel.webview.postMessage({
+                command: 'privacyModeState',
+                enabled: config.get<boolean>('privacy', false)
+            });
+            this._panel.webview.postMessage({
+                command: 'showAccountState',
+                enabled: config.get<boolean>('showAccount', true)
             });
         }, 100);
     }

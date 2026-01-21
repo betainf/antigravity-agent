@@ -11,7 +11,7 @@
 //!
 //! ```text
 //! ┌─────────────────────┐         ┌─────────────────────────────┐
-//! │  VSCode Extension   │◀──WS──▶│  Tauri App (:18888/ws)      │
+//! │  VSCode Extension   │◀──WS──▶│  Tauri App (:56789/ws)      │
 //! │                     │         │                             │
 //! │  WebSocket Client   │         │  WebSocket Server           │
 //! │  自动连接 + 重连     │         │  多客户端管理               │
@@ -423,7 +423,7 @@ impl Handler<TextMessage> for WsSession {
 /// # 路由
 ///
 /// ```text
-/// GET ws://127.0.0.1:18888/ws
+/// GET ws://127.0.0.1:56789/ws
 /// ```
 pub async fn ws_handler(
     req: HttpRequest,

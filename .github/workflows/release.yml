@@ -1,10 +1,16 @@
-name: Release Build v2
+name: Release Build
 
 on:
   push:
     tags:
       - 'v*'
   workflow_dispatch:
+    inputs:
+      publish_update:
+        description: 'Publish Update (trigger updater mechanism)'
+        required: true
+        default: true
+        type: boolean
 
 permissions:
   contents: write
@@ -57,10 +63,7 @@ jobs:
             - [Apple Silicon](${{ github.server_url }}/${{ github.repository }}/releases/download/${{ steps.version.outputs.tag }}/Antigravity.Agent_${{ steps.version.outputs.version }}_aarch64.dmg) | [Intel芯片](${{ github.server_url }}/${{ github.repository }}/releases/download/${{ steps.version.outputs.tag }}/Antigravity.Agent_${{ steps.version.outputs.version }}_x86_64.dmg)
 
             ### Linux
-            **AppImage(通用 推荐)**
-            - [Antigravity_Agent.AppImage](${{ github.server_url }}/${{ github.repository }}/releases/download/${{ steps.version.outputs.tag }}/antigravity-agent_${{ steps.version.outputs.version }}_amd64.AppImage)
-            - [Antigravity_Agent.deb](${{ github.server_url }}/${{ github.repository }}/releases/download/${{ steps.version.outputs.tag }}/antigravity-agent_${{ steps.version.outputs.version }}_amd64.deb)
-            ---
+            - [Flatpak](${{ github.server_url }}/${{ github.repository }}/releases/download/${{ steps.version.outputs.tag }}/antigravity-agent_${{ steps.version.outputs.version }}_amd64.flatpak) | [Deb安装包](${{ github.server_url }}/${{ github.repository }}/releases/download/${{ steps.version.outputs.tag }}/antigravity-agent_${{ steps.version.outputs.version }}_amd64.deb)
             ---
 
             ## 📋 更新日志
@@ -91,7 +94,7 @@ jobs:
   trigger-updater:
     needs: [prepare-release, build]
     runs-on: ubuntu-latest
-    if: success()
+    if: success() && (github.event_name != 'workflow_dispatch' || inputs.publish_update == true)
     steps:
       - name: Generate updater configuration
         uses: peter-evans/repository-dispatch@v2
@@ -128,28 +131,18 @@ jobs:
         working-directory: ./vscode-extension
         run: npm ci
 
-      - name: Bump to Build Version
-        id: bump
-        working-directory: ./vscode-extension
-        run: |
-          TIMESTAMP=$(date +%Y%m%d%H%M)
-          # Create unique build version e.g. 1.5.3-build.2023...
-          npm version prerelease --preid="build.$TIMESTAMP" --no-git-tag-version
-          
-          NEW_VERSION=$(node -p "require('./package.json').version")
-          echo "version=$NEW_VERSION" >> $GITHUB_OUTPUT
-          echo "📍 Build Version: $NEW_VERSION"
+
 
       - name: Build and Package Extension
         working-directory: ./vscode-extension
-        run: npx @vscode/vsce package --out ./antigravity-agent-${{ steps.bump.outputs.version }}.vsix
+        run: npx @vscode/vsce package --out ./antigravity-agent-${{ steps.version.outputs.version }}.vsix
 
       - name: Upload Extension to Release
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           TAG: ${{ needs.prepare-release.outputs.tag }}
         run: |
-          gh release upload "$TAG" vscode-extension/antigravity-agent-${{ steps.bump.outputs.version }}.vsix --clobber --repo "${{ github.repository }}"
+          gh release upload "$TAG" vscode-extension/antigravity-agent-${{ steps.version.outputs.version }}.vsix --clobber --repo "${{ github.repository }}"
 
       - name: Publish to Open VSX
         working-directory: ./vscode-extension
@@ -160,4 +153,4 @@ jobs:
             echo "⚠️ OVSX_PAT secret not found, skipping Open VSX publish"
             exit 0
           fi
-          npx ovsx publish ./antigravity-agent-${{ steps.bump.outputs.version }}.vsix --pat "$OVSX_PAT"
+          npx ovsx publish ./antigravity-agent-${{ steps.version.outputs.version }}.vsix --pat "$OVSX_PAT"

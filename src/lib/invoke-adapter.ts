@@ -1,4 +1,4 @@
-import { invoke } from '@tauri-apps/api/core';
+
 
 // 检测是否在 VS Code 扩展环境中运行
 // 我们可以通过检查是否存在 __TAURI__ 对象来判断，或者使用环境变量
@@ -6,7 +6,7 @@ import { invoke } from '@tauri-apps/api/core';
 const isExtension = !('__TAURI_INTERNALS__' in window) && !('__TAURI__' in window); // 简单的启发式检查
 
 // 本地服务器地址 (与 main.rs 中配置的一致)
-const SERVER_URL = 'http://127.0.0.1:18888/api';
+const SERVER_URL = 'http://127.0.0.1:56789/api';
 
 /**
  * 通用命令调用适配器
@@ -14,25 +14,45 @@ const SERVER_URL = 'http://127.0.0.1:18888/api';
  * 如果在 VS Code 扩展环境中，使用 HTTP 请求
  */
 export async function universalInvoke<T>(cmd: string, args?: Record<string, any>): Promise<T> {
-  if (isExtension) {
-    return httpInvoke<T>(cmd, args);
-  } else {
-    return invoke<T>(cmd, args);
-  }
+  // 强制全部请求走 HTTP (v5 架构)
+  return httpInvoke<T>(cmd, args);
 }
 
 // 需要 POST 方法的命令列表
 const POST_COMMANDS = new Set([
   'switch_to_antigravity_account',
   'get_account_metrics',
+  'write_frontend_log',
+  'write_text_file',
+  'open_log_directory',
+  'launch_and_install_extension',
+  'save_antigravity_current_account',
+  'restore_antigravity_account',
+  'clear_all_antigravity_data',
+  'sign_in_new_antigravity_account',
+  'trigger_quota_refresh',
+  'restore_backup_files',
+  'delete_backup',
+  'clear_all_backups',
+  'save_system_tray_state',
+  'save_silent_start_state',
+  'save_private_mode_state',
+  'save_debug_mode_state',
+  'set_language',
+  'validate_antigravity_executable',
+  'save_antigravity_executable',
+  'encrypt_config_data',
+  'decrypt_config_data',
+  'update_tray_menu_command',
+  'minimize_to_tray',
+  'restore_from_tray',
+  'start_database_monitoring',
+  'stop_database_monitoring',
 ]);
 
 // 在 HTTP 模式下忽略的命令（返回 undefined）
-const IGNORED_COMMANDS = new Set([
-  'write_frontend_log',
-  'open_log_directory',
-  'get_log_directory_path',
-  'write_text_file',
+const IGNORED_COMMANDS = new Set<string>([
+  // All commands are now supported via HTTP
 ]);
 
 /**

@@ -15,16 +15,28 @@ export class AutoAcceptManager {
     private static context: vscode.ExtensionContext | undefined;
 
     /**
-     * Initializes the manager and restores persisted state.
-     * @param context The extension context for globalState access.
+     * Initializes the manager and reads configuration state.
+     * @param context The extension context.
      */
     public static initialize(context: vscode.ExtensionContext) {
         this.context = context;
-        const savedState = context.globalState.get<boolean>(STATE_KEY, false);
-        if (savedState) {
-            Logger.log('🚁 Auto Pilot: Restoring saved state (enabled)');
+
+        const config = vscode.workspace.getConfiguration('antigravity-agent');
+        const autoPilotEnabled = config.get<boolean>('autoPilot', false);
+
+        if (autoPilotEnabled) {
+            Logger.log('🚁 Auto Pilot: Enabled via Configuration');
             this.toggle(true);
         }
+
+        // Listen for configuration changes to sync state
+        context.subscriptions.push(vscode.workspace.onDidChangeConfiguration(e => {
+            if (e.affectsConfiguration('antigravity-agent.autoPilot')) {
+                const newState = vscode.workspace.getConfiguration('antigravity-agent').get<boolean>('autoPilot', false);
+                Logger.log(`🚁 Auto Pilot: Config changed to ${newState}`);
+                this.toggle(newState);
+            }
+        }));
     }
 
     /**
@@ -39,12 +51,8 @@ export class AutoAcceptManager {
      * @param enabled Whether to enable or disable the pilot.
      */
     public static toggle(enabled: boolean) {
+        // Just update internal state, persistence is handled via Settings update in Panel or User Action
         this.enabled = enabled;
-
-        // Persist to globalState
-        if (this.context) {
-            this.context.globalState.update(STATE_KEY, enabled);
-        }
 
         if (this.enabled) {
             Logger.log('🚁 Smart Pilot: Engaged');

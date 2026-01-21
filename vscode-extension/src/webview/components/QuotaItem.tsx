@@ -1,5 +1,5 @@
 import React from 'react';
-import {useTranslation} from 'react-i18next';
+import { useTranslation } from 'react-i18next';
 
 interface QuotaItemProps {
     label: string;
@@ -34,7 +34,7 @@ export const QuotaItem: React.FC<QuotaItemProps> = ({ label, percentage, resetTe
 
     // Treat undefined or negative values as unknown/invalid
     const isValid = percentage !== undefined && percentage >= 0;
-    const val = isValid ? Math.round(percentage! * 100) : '?';
+    const val = isValid ? Math.round(percentage! * 100) : t('dashboard:quota.unknown');
 
     // Only show reset text if valid and used (less than 100% typically, or logic as needed)
     // Original logic was percentage < 1, which implies < 100%. 
@@ -42,17 +42,31 @@ export const QuotaItem: React.FC<QuotaItemProps> = ({ label, percentage, resetTe
     const showReset = isValid && percentage! < 1 && resetText;
 
     return (
-        <div className="flex items-center justify-between text-sm mt-1">
-            <div className="flex items-center gap-2">
-                <span className="opacity-80">{label}</span>
-                {showReset && (
-                    <span className="text-xs opacity-70 ml-1">
-                        {t('dashboard:quota.resetAt', { time: formatTime(resetText) })}
-                    </span>
-                )}
+        <div className="flex flex-col gap-1 mt-2">
+            <div className="flex items-center justify-between text-sm">
+                <div className="flex items-center gap-1">
+                    <span className="opacity-90 font-medium">{label}</span>
+                    {showReset && (
+                        <span className="text-[10px] opacity-60 ml-1">
+                            ({formatTime(resetText).split(' ')[1] || formatTime(resetText)})
+                        </span>
+                    )}
+                </div>
+                <span className={`font-bold text-xs ${getQuotaColor(isValid ? percentage : undefined)}`}>
+                    {val}{isValid ? '%' : ''}
+                </span>
             </div>
-            <span
-                className={`font-bold ${getQuotaColor(isValid ? percentage : undefined)}`}>{val}{isValid ? '%' : ''}</span>
+            {/* Progress Bar */}
+            <div className="w-full h-1.5 bg-white/10 rounded-full overflow-hidden">
+                <div
+                    className={`h-full rounded-full transition-all duration-500 ease-out ${percentage === undefined ? 'bg-white/20' :
+                        percentage < 0.2 ? 'bg-red-500' :
+                            percentage < 0.5 ? 'bg-yellow-500' :
+                                'bg-vscode-info'
+                        }`}
+                    style={{ width: `${Math.max(5, (percentage || 0) * 100)}%` }} // Min width 5% so it's visible
+                />
+            </div>
         </div>
     );
 };

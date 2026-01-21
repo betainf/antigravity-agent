@@ -21,6 +21,36 @@
     ],
     "main": "./dist/extension/extension.js",
     "contributes": {
+        "configuration": {
+            "title": "Antigravity Agent",
+            "properties": {
+                "antigravity-agent.privacy": {
+                    "type": "boolean",
+                    "default": false,
+                    "description": "Enable Privacy Mode (masks email in status bar)."
+                },
+                "antigravity-agent.autoPilot": {
+                    "type": "boolean",
+                    "default": false,
+                    "description": "Enable Auto Pilot mode."
+                },
+                "antigravity-agent.showAccount": {
+                    "type": "boolean",
+                    "default": true,
+                    "description": "Show the current account in the StatusBar.",
+                    "title": "Show Account"
+                }
+            }
+        },
+        "icons": {
+            "antigravity-logo": {
+                "description": "Antigravity Agent Logo",
+                "default": {
+                    "fontPath": "./images/icon-outline.svg",
+                    "fontCharacter": "\\E001"
+                }
+            }
+        },
         "commands": [
             {
                 "command": "antigravity.agent.open_dashboard",
@@ -62,6 +92,7 @@
     "dependencies": {
         "@vscode/codicons": "^0.0.44",
         "@vscode/webview-ui-toolkit": "^1.4.0",
+        "dayjs": "^1.11.19",
         "i18next": "^25.7.3",
         "i18next-browser-languagedetector": "^8.2.0",
         "react": "^19.0.0",

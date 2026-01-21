@@ -19,6 +19,8 @@ const vscodeApi = (() => {
 const App: React.FC = () => {
     const { t } = useTranslation(['dashboard', 'common']);
     const [autoAccept, setAutoAccept] = useState(false);
+    const [privacyMode, setPrivacyMode] = useState(false);
+    const [showAccount, setShowAccount] = useState(true);
 
     // Listen for state messages from Extension Host
     useEffect(() => {
@@ -26,6 +28,10 @@ const App: React.FC = () => {
             const message = event.data;
             if (message.command === 'autoPilotState') {
                 setAutoAccept(message.enabled);
+            } else if (message.command === 'privacyModeState') {
+                setPrivacyMode(message.enabled);
+            } else if (message.command === 'showAccountState') {
+                setShowAccount(message.enabled);
             }
         };
         window.addEventListener('message', handleMessage);
@@ -43,10 +49,24 @@ const App: React.FC = () => {
         }
     };
 
-    const handleReload = () => {
+    const togglePrivacyMode = () => {
+        const newState = !privacyMode;
+        setPrivacyMode(newState);
         if (vscodeApi) {
             vscodeApi.postMessage({
-                command: 'reloadWindow'
+                command: 'setPrivacyMode',
+                enabled: newState
+            });
+        }
+    };
+
+    const toggleShowAccount = () => {
+        const newState = !showAccount;
+        setShowAccount(newState);
+        if (vscodeApi) {
+            vscodeApi.postMessage({
+                command: 'setShowAccount',
+                enabled: newState
             });
         }
     };
@@ -72,20 +92,27 @@ const App: React.FC = () => {
                     >
                         {t('dashboard:actions.autoPilot')}
                     </VSCodeCheckbox>
-                    <VSCodeButton
-                        appearance="secondary"
-                        className="h-6 text-[12px]"
-                        onClick={handleReload}
+                    <VSCodeCheckbox
+                        checked={privacyMode}
+                        onChange={togglePrivacyMode}
+                        className="text-[12px] opacity-70"
                     >
-                        Reload
-                    </VSCodeButton>
+                        {t('dashboard:actions.privacyMode')}
+                    </VSCodeCheckbox>
+                    <VSCodeCheckbox
+                        checked={showAccount}
+                        onChange={toggleShowAccount}
+                        className="text-[12px] opacity-70"
+                    >
+                        {t('dashboard:actions.showAccount')}
+                    </VSCodeCheckbox>
                 </div>
             </div>
 
             {/* Content Area */}
             <div className="flex-1 overflow-auto">
                 <div className="h-full">
-                    <AccountsTab />
+                    <AccountsTab privacyMode={privacyMode} />
                 </div>
             </div>
         </div>

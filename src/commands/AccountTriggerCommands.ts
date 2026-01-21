@@ -1,4 +1,4 @@
-import { invoke } from '@tauri-apps/api/core';
+import { universalInvoke } from '@/lib/invoke-adapter';
 
 export interface TriggerResult {
     email: string;
@@ -18,6 +18,6 @@ export class AccountTriggerCommands {
      * @param email The account email
      */
     static async triggerQuotaRefresh(email: string): Promise<TriggerResult> {
-        return invoke('trigger_quota_refresh', { email });
+        return universalInvoke('trigger_quota_refresh', { email });
     }
 }

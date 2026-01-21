@@ -1,4 +1,4 @@
-import { invoke } from '@tauri-apps/api/core';
+import { universalInvoke } from '@/lib/invoke-adapter';
 import type { TrayMenuLabels } from './types/tray.types';
 
 /**
@@ -10,7 +10,7 @@ export class TrayCommands {
    * @returns 最小化结果消息
    */
   static async minimize(): Promise<string> {
-    return invoke('minimize_to_tray');
+    return universalInvoke('minimize_to_tray');
   }
 
   /**
@@ -18,7 +18,7 @@ export class TrayCommands {
    * @returns 恢复结果消息
    */
   static async restore(): Promise<string> {
-    return invoke('restore_from_tray');
+    return universalInvoke('restore_from_tray');
   }
 
 
@@ -29,6 +29,6 @@ export class TrayCommands {
    * @returns 更新结果消息
    */
   static async updateMenu(accounts: string[], labels?: TrayMenuLabels): Promise<string> {
-    return invoke('update_tray_menu_command', { accounts, labels });
+    return universalInvoke('update_tray_menu_command', { accounts, labels });
   }
 }
